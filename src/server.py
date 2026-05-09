@@ -10,18 +10,35 @@ _BASE = "https://app.careerplug.com"
 _client: httpx.AsyncClient | None = None
 
 
-def _build_client() -> httpx.AsyncClient:
-    """Read session cookie from Chrome and CSRF token from CareerPlug page meta tag."""
-    cookiejar = browser_cookie3.chrome(domain_name=".careerplug.com")
-    session_cookie = next(
-        (c.value for c in cookiejar if c.name == "_career_plug_ats_session"),
-        None,
+def _find_session_cookie() -> str:
+    """Search all supported browsers for the CareerPlug session cookie."""
+    browsers = [
+        ("Chrome", browser_cookie3.chrome),
+        ("Firefox", browser_cookie3.firefox),
+        ("Brave", browser_cookie3.brave),
+        ("Edge", browser_cookie3.edge),
+        ("Chromium", browser_cookie3.chromium),
+    ]
+    for _name, loader in browsers:
+        try:
+            cookiejar = loader(domain_name=".careerplug.com")
+            value = next(
+                (c.value for c in cookiejar if c.name == "_career_plug_ats_session"),
+                None,
+            )
+            if value:
+                return value
+        except Exception:
+            continue
+    raise RuntimeError(
+        "No CareerPlug session found in Chrome, Firefox, or Brave. "
+        "Please log into app.careerplug.com in your browser and try again."
     )
-    if not session_cookie:
-        raise RuntimeError(
-            "No CareerPlug session found in Chrome. "
-            "Please log into app.careerplug.com in Chrome and try again."
-        )
+
+
+def _build_client() -> httpx.AsyncClient:
+    """Read session cookie from the browser and CSRF token from CareerPlug page meta tag."""
+    session_cookie = _find_session_cookie()
 
     # Synchronous bootstrap request to get the CSRF token from the page meta tag
     r = httpx.get(
@@ -143,6 +160,29 @@ async def list_applicants(
         params = {"page": page, "status": status}
     html = await _fetch_html("/manage/apps/list", params)
     return _parse_applicants(html)
+
+
+@mcp.tool
+async def debug_cookie_search() -> dict:
+    """Temporary debug tool: report which browsers were found and whether the CareerPlug cookie exists in each."""
+    import browser_cookie3
+    browsers = [
+        ("Chrome", browser_cookie3.chrome),
+        ("Firefox", browser_cookie3.firefox),
+        ("Brave", browser_cookie3.brave),
+        ("Edge", browser_cookie3.edge),
+        ("Chromium", browser_cookie3.chromium),
+    ]
+    results = {}
+    for name, loader in browsers:
+        try:
+            cookiejar = loader(domain_name=".careerplug.com")
+            cookies = [c.name for c in cookiejar]
+            has_session = "_career_plug_ats_session" in cookies
+            results[name] = {"found": True, "has_session_cookie": has_session, "all_cookie_names": cookies}
+        except Exception as e:
+            results[name] = {"found": False, "error": str(e)}
+    return results
 
 
 if __name__ == "__main__":
