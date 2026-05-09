@@ -1,34 +1,60 @@
-import os
 import fastmcp
 import httpx
+import browser_cookie3
 from bs4 import BeautifulSoup
 
 mcp = fastmcp.FastMCP("careerplug")
 
 _BASE = "https://app.careerplug.com"
-_SESSION_COOKIE = os.environ.get("CAREERPLUG_SESSION_COOKIE", "")
-_CSRF_TOKEN = os.environ.get("CAREERPLUG_CSRF_TOKEN", "")
 
 _client: httpx.AsyncClient | None = None
+
+
+def _build_client() -> httpx.AsyncClient:
+    """Read session cookie from Chrome and CSRF token from CareerPlug page meta tag."""
+    cookiejar = browser_cookie3.chrome(domain_name=".careerplug.com")
+    session_cookie = next(
+        (c.value for c in cookiejar if c.name == "_career_plug_ats_session"),
+        None,
+    )
+    if not session_cookie:
+        raise RuntimeError(
+            "No CareerPlug session found in Chrome. "
+            "Please log into app.careerplug.com in Chrome and try again."
+        )
+
+    # Synchronous bootstrap request to get the CSRF token from the page meta tag
+    r = httpx.get(
+        f"{_BASE}/manage/jobs",
+        cookies={"_career_plug_ats_session": session_cookie},
+        headers={"Accept": "text/html"},
+        follow_redirects=True,
+        timeout=15,
+    )
+    r.raise_for_status()
+    meta = BeautifulSoup(r.text, "html.parser").find("meta", {"name": "csrf-token"})
+    if not meta:
+        raise RuntimeError(
+            "Could not find CSRF token on CareerPlug. "
+            "Your session may have expired — please reload app.careerplug.com in Chrome and try again."
+        )
+
+    return httpx.AsyncClient(
+        base_url=_BASE,
+        cookies={"_career_plug_ats_session": session_cookie},
+        headers={
+            "X-CSRF-Token": meta["content"],
+            "Accept": "text/html, */*",
+            "X-Requested-With": "XMLHttpRequest",
+        },
+        follow_redirects=True,
+    )
 
 
 def _get_client() -> httpx.AsyncClient:
     global _client
     if _client is None:
-        if not _SESSION_COOKIE or not _CSRF_TOKEN:
-            raise RuntimeError(
-                "Set CAREERPLUG_SESSION_COOKIE and CAREERPLUG_CSRF_TOKEN env vars before starting the server."
-            )
-        _client = httpx.AsyncClient(
-            base_url=_BASE,
-            cookies={"_career_plug_ats_session": _SESSION_COOKIE},
-            headers={
-                "X-CSRF-Token": _CSRF_TOKEN,
-                "Accept": "text/html, */*",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-            follow_redirects=True,
-        )
+        _client = _build_client()
     return _client
 
 
@@ -47,7 +73,6 @@ def _parse_jobs(html: str) -> list[dict]:
         badge = row.select_one("td.max-width span.badge")
         location = row.select_one("td.location")
         count_td = row.select_one("td.text-capitalize:not(.location)")
-        # Second min-width td is the posted date (first has the clicks link)
         min_width_tds = row.select("td.min-width")
         posted_date = min_width_tds[1].get_text(strip=True) if len(min_width_tds) >= 2 else None
         count_text = count_td.get_text(strip=True) if count_td else None

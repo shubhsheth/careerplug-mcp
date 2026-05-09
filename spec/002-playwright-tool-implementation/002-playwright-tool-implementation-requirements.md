@@ -17,16 +17,18 @@ Implement real data fetching for the two stub MCP tools by using httpx to call C
 - FR-3: `list_applicants` accepts `page: int = 1`, `status: str = "active"`, `job_id: int | None = None`.
 - FR-4: `list_applicants` without `job_id` calls `GET /manage/apps/list` with params `page`, `status`. Valid status values: `new`, `in_process`, `active`, `disqualified`, `hired`, `pipeline`, `inactive`.
 - FR-5: `list_applicants` with `job_id` calls `GET /manage/apps/list` with params `app_link=true`, `apps_hiring_pipeline_step=all`, `apps_j[]={job_id}`, `apps_job_status=all`, `page`.
-- FR-6: Both tools authenticate using a `_career_plug_ats_session` cookie and `X-CSRF-Token` header provided by the user at startup (via env vars `CAREERPLUG_SESSION_COOKIE` and `CAREERPLUG_CSRF_TOKEN`).
-- FR-7: Both tools parse the returned HTML table rows using BeautifulSoup and return a list of dicts.
-- FR-8: `list_applicants` returns dicts with keys: `id`, `name`, `profile_url`, `job_title`, `job_url`, `current_step`, `location`.
-- FR-9: `list_jobs` returns dicts with keys determined by inspecting the `/manage/jobs/list` HTML response (discovery step — see Tasks).
-- FR-10: Both tools raise a clear error if the session cookie env var is not set.
+- FR-6: On first tool call, the server automatically reads `_career_plug_ats_session` from Chrome's cookie store using `browser-cookie3`. No env vars or manual steps required from the user.
+- FR-7: After reading the session cookie, the server makes one synchronous GET to `/manage/jobs` and extracts the CSRF token from `<meta name="csrf-token">` in the response HTML.
+- FR-8: Both tools parse the returned HTML table rows using BeautifulSoup and return a list of dicts.
+- FR-9: `list_applicants` returns dicts with keys: `id`, `name`, `profile_url`, `job_title`, `job_url`, `current_step`, `location`.
+- FR-10: `list_jobs` returns dicts with keys: `id`, `title`, `job_url`, `status`, `location`, `applicant_count`, `posted_date`.
+- FR-11: If no CareerPlug session cookie is found in Chrome, the server raises a `RuntimeError` with a human-readable message instructing the user to log into `app.careerplug.com` in Chrome first.
+- FR-12: If the CSRF token cannot be extracted (e.g. session expired), the server raises a `RuntimeError` with a message telling the user to reload CareerPlug in Chrome.
 
 ## Non-Functional Requirements
 
-- NFR-1: No credentials are stored or committed in code — auth values come from env vars.
-- NFR-2: No browser is launched; all requests use httpx directly.
+- NFR-1: No credentials are stored or committed in code. Auth is read from Chrome's existing session transparently.
+- NFR-2: No browser is launched. Chrome cookies are read directly from disk via `browser-cookie3`; all CareerPlug requests use httpx.
 - NFR-3: Tools are `async` (use `httpx.AsyncClient`) to avoid blocking the MCP server event loop.
 - NFR-4: A single `httpx.AsyncClient` is reused across calls (module-level client, constructed lazily).
 
@@ -60,22 +62,23 @@ Selectors to be discovered via `get_page_html` debug tool (see Tasks).
 ## Assumptions
 
 - Python 3.11+ and `uv` are available.
-- `httpx` and `beautifulsoup4` packages will be added as dependencies.
-- The user provides a valid `_career_plug_ats_session` cookie and CSRF token via env vars before starting the server.
-- The `/manage/jobs/list` endpoint exists and returns a similar HTML table structure (to be confirmed during implementation).
+- `httpx`, `beautifulsoup4`, and `browser-cookie3` packages will be added as dependencies.
+- The user is logged into `app.careerplug.com` in Chrome before calling any tool.
+- Chrome is installed on the user's machine and accessible to `browser-cookie3`.
 
 ## Tech Stack
 
 - Language: Python 3.11+
 - MCP framework: FastMCP
-- HTTP client: httpx (async)
+- HTTP client: httpx (async for tool calls, sync for CSRF bootstrap)
 - HTML parsing: BeautifulSoup (bs4)
+- Cookie extraction: browser-cookie3
 - Package manager: uv
 
 ## Commands
 
 ```
-Install deps:   uv add httpx beautifulsoup4
+Install deps:   uv add httpx beautifulsoup4 browser-cookie3
 Run dev server: fastmcp dev src/server.py
 Run stdio:      fastmcp run src/server.py
 Syntax check:   uv run python -c "import src.server"
@@ -134,9 +137,9 @@ Verification steps:
 
 ## Boundaries
 
-- **Always:** Use env vars for auth; close httpx client on shutdown; use `async` for all tool functions.
+- **Always:** Use `browser-cookie3` for auth; use `async` for all tool functions; give clear error messages when Chrome session is missing or expired.
 - **Ask first:** Adding a new filter parameter; changing the base URL; switching auth strategy.
-- **Never:** Store credentials in code or config files; launch a browser.
+- **Never:** Store credentials in code or config files; launch a browser; prompt the user for credentials.
 
 ## Success Criteria
 
