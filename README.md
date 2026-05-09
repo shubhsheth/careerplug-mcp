@@ -6,8 +6,8 @@ An MCP server for CareerPlug, built with [FastMCP](https://gofastmcp.com).
 
 | Tool | Parameters | Description |
 |---|---|---|
-| `list_jobs` | `page` (int), `status` (None/0/1/2/3), `refresh` (bool) | List jobs. status: None=all, 0=draft, 1=active, 2=closed, 3=passive. |
-| `list_applicants` | `page` (int), `status` (str), `job_id` (int, optional) | List applicants. status: active/new/in_process/disqualified/hired/pipeline/inactive. Pass `job_id` to filter to a specific job. |
+| `list_jobs` | `page` (int), `per_page` (int), `status` (None/0/1/2/3), `sort_by` (str), `sort_direction` (ASC/DESC), `refresh` (bool) | List jobs. status: None=all, 0=draft, 1=active, 2=closed, 3=passive. sort_by: jobs.created_at, jobs.name, jobs.refreshed_at, location_name, app_count, jobs.updated_at. |
+| `list_applicants` | `page` (int), `per_page` (int), `status` (str), `sort_by` (str), `job_ids` (list[int]), `locations` (list[int]) | List applicants. status: active/new/in_process/disqualified/hired/pipeline/inactive. sort_by: date-asc, date-desc, name-asc, name-desc, job_name-asc, job_name-desc, score-asc, score-desc. Pass `job_ids` to filter to specific jobs, `locations` to filter by location ID. |
 | `debug_cookie_search` | — | Diagnostic: shows which browsers were found and whether the session cookie exists in each. |
 
 ## Authentication
