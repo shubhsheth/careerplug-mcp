@@ -22,54 +22,6 @@ async def _close(pw, browser, page: Page) -> None:
     await pw.stop()
 
 
-async def _extract_jobs(page: Page) -> list[dict]:
-    """Extract job rows from the rendered jobs table."""
-    # Wait for the job list to appear
-    await page.wait_for_selector("table tbody tr, [data-testid='job-row'], .job-row", timeout=15_000)
-    return await page.evaluate("""() => {
-        const rows = Array.from(
-            document.querySelectorAll("table tbody tr")
-        );
-        return rows.map(row => {
-            const cells = Array.from(row.querySelectorAll("td"));
-            const link = row.querySelector("a[href*='/manage/jobs/']");
-            const href = link ? link.getAttribute("href") : null;
-            const id = href ? href.match(/\\/manage\\/jobs\\/(\\d+)/)?.[1] : null;
-            return {
-                id: id ? parseInt(id) : null,
-                title: cells[0]?.innerText.trim() || null,
-                location: cells[1]?.innerText.trim() || null,
-                status: cells[2]?.innerText.trim() || null,
-                applicants: cells[3]?.innerText.trim() || null,
-            };
-        }).filter(r => r.title);
-    }""")
-
-
-async def _extract_applicants(page: Page) -> list[dict]:
-    """Extract applicant rows from the rendered applicants table."""
-    await page.wait_for_selector("table tbody tr, [data-testid='applicant-row'], .applicant-row", timeout=15_000)
-    return await page.evaluate("""() => {
-        const rows = Array.from(
-            document.querySelectorAll("table tbody tr")
-        );
-        return rows.map(row => {
-            const cells = Array.from(row.querySelectorAll("td"));
-            const link = row.querySelector("a[href*='/manage/apps/']");
-            const href = link ? link.getAttribute("href") : null;
-            const id = href ? href.match(/\\/manage\\/apps\\/(\\d+)/)?.[1] : null;
-            return {
-                id: id ? parseInt(id) : null,
-                name: cells[0]?.innerText.trim() || null,
-                job: cells[1]?.innerText.trim() || null,
-                stage: cells[2]?.innerText.trim() || null,
-                status: cells[3]?.innerText.trim() || null,
-                applied_date: cells[4]?.innerText.trim() || null,
-            };
-        }).filter(r => r.name);
-    }""")
-
-
 @mcp.tool
 async def list_jobs(
     page: int = 1,
@@ -82,7 +34,7 @@ async def list_jobs(
     url = f"{_BASE}/manage/jobs?page={page}&refresh={refresh_val}&status={status_val}"
     pw, browser, pg = await _open_page(url)
     try:
-        return await _extract_jobs(pg)
+        return []  # extraction logic deferred until DOM is inspected
     finally:
         await _close(pw, browser, pg)
 
@@ -104,7 +56,7 @@ async def list_applicants(
         url = f"{_BASE}/manage/apps?page={page}&status={status}"
     pw, browser, pg = await _open_page(url)
     try:
-        return await _extract_applicants(pg)
+        return []  # extraction logic deferred until DOM is inspected
     finally:
         await _close(pw, browser, pg)
 
