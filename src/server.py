@@ -1,8 +1,9 @@
 import asyncio
-import base64
+import io
 
 import fastmcp
 import httpx
+import pypdf
 import browser_cookie3
 
 from client import fetch_html
@@ -122,10 +123,10 @@ async def get_applicant_details(app_id: int) -> dict:
 
 @mcp.tool
 async def download_attachment(app_id: int, attachment_id: int) -> dict:
-    """Download a document attached to a CareerPlug applicant as raw PDF bytes.
+    """Download a document attached to a CareerPlug applicant and return its text.
 
     Fetches the documents tab to obtain a fresh pre-signed S3 URL (valid for
-    10 seconds), then downloads the file directly from S3.
+    10 seconds), downloads the PDF from S3, and extracts the text content.
 
     Args:
         app_id: Numeric CareerPlug applicant ID.
@@ -134,7 +135,7 @@ async def download_attachment(app_id: int, attachment_id: int) -> dict:
     Returns:
         Dict with keys:
         - ``filename``: original filename (e.g. ``"Resume.pdf"``).
-        - ``content``: base64-encoded PDF bytes as a UTF-8 string.
+        - ``text``: extracted text content of the PDF.
     """
     docs_html = await fetch_html(
         f"/manage/apps/{app_id}",
@@ -145,7 +146,9 @@ async def download_attachment(app_id: int, attachment_id: int) -> dict:
     async with httpx.AsyncClient() as client:
         r = await client.get(s3_url)
         r.raise_for_status()
-    return {"filename": filename, "content": base64.b64encode(r.content).decode()}
+    reader = pypdf.PdfReader(io.BytesIO(r.content))
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    return {"filename": filename, "text": text}
 
 
 @mcp.tool
