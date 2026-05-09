@@ -38,6 +38,31 @@ async def _fetch_html(path: str, params: dict) -> str:
     return r.text
 
 
+def _parse_jobs(html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    results = []
+    for row in soup.select("tr.job.index-item"):
+        id_input = row.select_one("td.text-center input[data-id]")
+        a_title = row.select_one("td.max-width a.name")
+        badge = row.select_one("td.max-width span.badge")
+        location = row.select_one("td.location")
+        count_td = row.select_one("td.text-capitalize:not(.location)")
+        # Second min-width td is the posted date (first has the clicks link)
+        min_width_tds = row.select("td.min-width")
+        posted_date = min_width_tds[1].get_text(strip=True) if len(min_width_tds) >= 2 else None
+        count_text = count_td.get_text(strip=True) if count_td else None
+        results.append({
+            "id": id_input["data-id"] if id_input else None,
+            "title": a_title.get_text(strip=True) if a_title else None,
+            "job_url": a_title["href"] if a_title else None,
+            "status": badge.get_text(strip=True) if badge else None,
+            "location": location.get_text(strip=True) if location else None,
+            "applicant_count": int(count_text) if count_text and count_text.isdigit() else None,
+            "posted_date": posted_date,
+        })
+    return results
+
+
 def _parse_applicants(html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     results = []
@@ -59,13 +84,6 @@ def _parse_applicants(html: str) -> list[dict]:
 
 
 @mcp.tool
-async def get_list_html(path: str, params: dict | None = None) -> str:
-    """Debug tool: fetch raw HTML from a CareerPlug list endpoint. E.g. path='/manage/jobs/list', params={'page': 1}."""
-    html = await _fetch_html(path, params or {})
-    return html
-
-
-@mcp.tool
 async def list_jobs(
     page: int = 1,
     status: int | None = None,
@@ -78,7 +96,7 @@ async def list_jobs(
         "status": "" if status is None else status,
     }
     html = await _fetch_html("/manage/jobs/list", params)
-    return []  # jobs selector discovery pending — call get_list_html to inspect HTML
+    return _parse_jobs(html)
 
 
 @mcp.tool

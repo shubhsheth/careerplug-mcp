@@ -19,32 +19,36 @@
   - Acceptance: requirements doc documents httpx auth, HTML endpoints, known selectors
   - Files: `spec/002-playwright-tool-implementation/002-playwright-tool-implementation-requirements.md`
 
-- [ ] Task: Discover `/manage/jobs/list` selectors
-  - Acceptance: row selector and field→selector mapping documented in this plan
-  - Verify: call `get_page_html("https://app.careerplug.com/manage/jobs/list?page=1")` and inspect HTML
-  - **Blocker:** must complete before implementing `_parse_jobs`
+- [x] Task: Discover `/manage/jobs/list` selectors
+  - Row: `tr.job.index-item`
+  - `id`: `td.text-center input[data-id]` → `data-id` attr
+  - `title`: `td.max-width a.name` text + href → `job_url`
+  - `status`: `td.max-width span.badge` text
+  - `location`: `td.location` text
+  - `applicant_count`: `td.text-capitalize:not(.location)` text (int)
+  - `posted_date`: second `td.min-width` text (first is the clicks link)
 
-- [ ] Task: Add httpx and beautifulsoup4 deps
+- [x] Task: Add httpx and beautifulsoup4 deps
   - Acceptance: `pyproject.toml` lists both; `uv run python -c "import httpx, bs4"` exits 0
   - Verify: `uv add httpx beautifulsoup4`
   - Files: `pyproject.toml`, `uv.lock`
 
-- [ ] Task: Implement auth and httpx client
+- [x] Task: Implement auth and httpx client
   - Acceptance: module reads `CAREERPLUG_SESSION_COOKIE` and `CAREERPLUG_CSRF_TOKEN` env vars; raises `RuntimeError` if missing; constructs `httpx.AsyncClient` with correct headers/cookies
   - Files: `src/server.py`
 
-- [ ] Task: Implement `list_applicants`
+- [x] Task: Implement `list_applicants`
   - Acceptance: calls `/manage/apps/list` with correct params, parses `tr.app.index-item` rows, returns list of dicts with keys `id`, `name`, `profile_url`, `job_title`, `job_url`, `location`, `current_step`
   - Verify: `list_applicants()` returns non-empty list; `list_applicants(status="new")` returns only new applicants; `list_applicants(job_id=<id>)` returns applicants for that job
   - Files: `src/server.py`
 
-- [ ] Task: Implement `list_jobs`
+- [x] Task: Implement `list_jobs`
   - Acceptance: calls `/manage/jobs/list` with correct params, parses job rows, returns list of dicts
   - Verify: `list_jobs()` returns non-empty list; `list_jobs(status=1)` returns only active jobs
   - Files: `src/server.py`
   - **Depends on:** jobs selector discovery task
 
-- [ ] Task: Remove `get_page_html` debug tool
+- [x] Task: Remove debug tools; `get_list_html` removed along with Playwright
   - Acceptance: `get_page_html` no longer appears in `src/server.py`; Playwright import removed; `playwright` removed from `pyproject.toml`
   - Files: `src/server.py`, `pyproject.toml`
 
