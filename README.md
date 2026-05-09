@@ -60,7 +60,7 @@ Add this to your `claude_desktop_config.json`:
   "mcpServers": {
     "careerplug": {
       "command": "uv",
-      "args": ["run", "python", "/path/to/careerplug-mcp/src/server.py"]
+      "args": ["run", "--directory", "/path/to/careerplug-mcp", "python", "src/server.py"]
     }
   }
 }
