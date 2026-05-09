@@ -13,6 +13,7 @@ async def list_jobs(
     per_page: int = 20,
     status: int | None = None,
     sort_by: str = "jobs.created_at",
+    sort_direction: str = "DESC",
     refresh: bool = False,
 ) -> list:
     """List jobs from CareerPlug.
@@ -24,6 +25,7 @@ async def list_jobs(
             0=draft, 1=active, 2=closed, 3=passive.
         sort_by: Field to sort by. Valid values: jobs.created_at, jobs.name,
             jobs.refreshed_at, location_name, app_count, jobs.updated_at.
+        sort_direction: Sort direction. Valid values: ASC, DESC.
         refresh: Pass ``refresh=1`` to CareerPlug to bust its server-side
             cache and return fresh data.
 
@@ -37,6 +39,7 @@ async def list_jobs(
         "refresh": "1" if refresh else "",
         "status": "" if status is None else status,
         "sort_by": sort_by,
+        "sort_direction": sort_direction,
     }
     html = await fetch_html("/manage/jobs/list", params)
     return parse_jobs(html)
