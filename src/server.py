@@ -1,3 +1,5 @@
+import asyncio
+
 import fastmcp
 import browser_cookie3
 
@@ -91,7 +93,7 @@ async def list_applicants(
 
 @mcp.tool
 async def get_applicant_details(app_id: int) -> dict:
-    """Fetch full profile for a single applicant.
+    """Fetch full profile for a single applicant, including uploaded documents.
 
     Args:
         app_id: The numeric CareerPlug applicant ID (visible in the URL,
@@ -99,31 +101,21 @@ async def get_applicant_details(app_id: int) -> dict:
 
     Returns:
         Dict with keys: name, email, phone, applied_date, applied_via,
-        job_title, job_location, current_step, hiring_steps, is_duplicate.
+        job_title, job_location, current_step, hiring_steps, is_duplicate,
+        documents.
         ``hiring_steps`` is a list of dicts with ``name`` and ``status``
         (``"current"``, ``"future"``, or ``"completed"``).
+        ``documents`` is a list of dicts with ``name``, ``attachment_id``,
+        ``download_url``, and ``uploaded_date``.
         Fields absent from the page are ``None``.
     """
-    html = await fetch_html(f"/manage/apps/{app_id}", {})
-    return parse_applicant_details(html)
-
-
-@mcp.tool
-async def get_applicant_documents(app_id: int) -> list:
-    """List uploaded documents for a single applicant.
-
-    Args:
-        app_id: The numeric CareerPlug applicant ID.
-
-    Returns:
-        List of dicts with keys: name, attachment_id, download_url,
-        uploaded_date. Empty list if no documents have been uploaded.
-    """
-    html = await fetch_html(
-        f"/manage/apps/{app_id}",
-        {"tab": "documents", "linked_from_dupe": "false"},
+    overview_html, docs_html = await asyncio.gather(
+        fetch_html(f"/manage/apps/{app_id}", {}),
+        fetch_html(f"/manage/apps/{app_id}", {"tab": "documents", "linked_from_dupe": "false"}),
     )
-    return parse_applicant_documents(html)
+    result = parse_applicant_details(overview_html)
+    result["documents"] = parse_applicant_documents(docs_html)
+    return result
 
 
 @mcp.tool

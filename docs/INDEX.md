@@ -13,8 +13,8 @@ public API. The endpoints it targets are:
 
 - `/manage/jobs/list` — server-rendered HTML table of job listings
 - `/manage/apps/list` — server-rendered HTML table of applicants
-- `/manage/apps/{id}` — full applicant profile page (overview tab)
-- `/manage/apps/{id}?tab=documents` — applicant documents tab
+- `/manage/apps/{id}` — full applicant profile page (overview tab); fetched by `get_applicant_details`
+- `/manage/apps/{id}?tab=documents` — applicant documents tab; also fetched by `get_applicant_details` in parallel
 
 ### Module Structure
 
@@ -74,6 +74,12 @@ Both endpoints return server-rendered HTML table rows, not JSON.
   `.profile-show__applicant-name` (first text node), `.profile-show__email a`,
   `.profile-show__phone a`, `.profile-show__job-activated`, `.profile-show__job-name`,
   and `#accordion .d-flex.flex-row` for the hiring pipeline steps
+- Applicant documents: fetched from the same URL with `?tab=documents`; document
+  rows are `#profile-applicant-documents [id^="profile-applicant-document-has_attachment_"]`;
+  name from `.profile-applicant-documents__title`, download URL from
+  `.profile-applicant-documents__download[href]`, date from `.form-text.text-muted`
+- `get_applicant_details` fetches both pages with `asyncio.gather` and merges the
+  results, returning a `documents` key alongside the profile fields
 
 Selectors were discovered via live DOM inspection (see `spec/002`). If
 CareerPlug changes their markup, parsers silently return `None` for affected
