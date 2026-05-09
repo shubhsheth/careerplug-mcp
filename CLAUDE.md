@@ -78,6 +78,31 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Documentation
+
+### Before starting any task
+- Read `docs/INDEX.md` — architecture, patterns, and assumptions for this repo.
+  Read the files it points you to that are relevant to your task.
+- Read `reference-docs/INDEX.md` — external libraries and API specs.
+  Fetch the entry points listed there before using any external API.
+
+### Two-level documentation rule
+
+**Level 1 — Repo docs** (`docs/`):
+- Captures architecture decisions, design patterns, and cross-cutting assumptions
+- Read before planning. Update when your changes affect the repo's structure or patterns.
+- If your implementation introduces a new pattern or invalidates an assumption, update the relevant doc.
+
+**Level 2 — Function/inline** (in code):
+- Docstring on every non-trivial function: purpose, params, return, side effects
+- Inline comments on non-obvious logic — explain *why*, not *what*
+- Do not comment self-evident code
+- Write as you implement, not after
+
+### When modifying existing code
+- If you change something that contradicts `docs/`, update `docs/` — don't leave stale repo-level docs
+- Update docstrings and inline comments for every function you touched
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
