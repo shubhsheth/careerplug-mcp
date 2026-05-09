@@ -34,7 +34,7 @@ uv run python src/careerplug_mcp/server.py
 **With the MCP inspector (browser UI for testing):**
 
 ```bash
-uv run fastmcp dev src/careerplug_mcp/server.py
+uv run fastmcp dev inspector src/careerplug_mcp/server.py
 ```
 
 ## Connecting to Claude Desktop
