@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright, Page
 
 mcp = fastmcp.FastMCP("careerplug")
 
-_CDP_URL = "http://localhost:9222"
+_CDP_URL = "http://127.0.0.1:9222"
 _BASE = "https://app.careerplug.com"
 
 
