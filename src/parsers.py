@@ -122,6 +122,8 @@ def parse_applicant_documents(html: str) -> list[dict]:
         date_el = doc.select_one(".form-text.text-muted")
 
         download_url = download_el["href"] if download_el else None
+        if download_url and download_url.startswith("/"):
+            download_url = f"https://app.careerplug.com{download_url}"
         attachment_id = None
         if download_url:
             try:
