@@ -10,15 +10,22 @@ mcp = fastmcp.FastMCP("careerplug")
 @mcp.tool
 async def list_jobs(
     page: int = 1,
+    per_page: int = 20,
     status: int | None = None,
+    sort_by: str = "jobs.created_at",
+    sort_direction: str = "DESC",
     refresh: bool = False,
 ) -> list:
     """List jobs from CareerPlug.
 
     Args:
         page: Page number for pagination (1-indexed).
+        per_page: Number of results per page.
         status: Filter by job status. None returns all jobs.
             0=draft, 1=active, 2=closed, 3=passive.
+        sort_by: Field to sort by. Valid values: jobs.created_at, jobs.name,
+            jobs.refreshed_at, location_name, app_count, jobs.updated_at.
+        sort_direction: Sort direction. Valid values: ASC, DESC.
         refresh: Pass ``refresh=1`` to CareerPlug to bust its server-side
             cache and return fresh data.
 
@@ -28,8 +35,11 @@ async def list_jobs(
     """
     params = {
         "page": page,
+        "per_page": per_page,
         "refresh": "1" if refresh else "",
         "status": "" if status is None else status,
+        "sort_by": sort_by,
+        "sort_direction": sort_direction,
     }
     html = await fetch_html("/manage/jobs/list", params)
     return parse_jobs(html)
@@ -38,43 +48,43 @@ async def list_jobs(
 @mcp.tool
 async def list_applicants(
     page: int = 1,
+    per_page: int = 20,
     status: str = "active",
-    job_id: int | None = None,
+    sort_by: str = "date-desc",
+    job_ids: list[int] = [],
+    locations: list[int] = [],
 ) -> list:
     """List applicants from CareerPlug.
 
-    When ``job_id`` is provided, uses the pipeline-centric query mode
-    (``app_link=true``, ``apps_hiring_pipeline_step=all``) that CareerPlug's
-    frontend uses on the job detail page. This is a distinct query path with
-    different URL params, not a filter added to the default list view.
-
-    When ``job_id`` is absent, queries the global applicants list filtered
-    by ``status``.
-
     Args:
         page: Page number for pagination (1-indexed).
-        status: Applicant status filter for the global list view.
-            Valid values: active, new, in_process, disqualified, hired,
-            pipeline, inactive. Ignored when ``job_id`` is set.
-        job_id: If provided, return only applicants for this job ID across
-            all pipeline steps.
+        per_page: Number of results per page.
+        status: Applicant status filter. Valid values: active, new, in_process,
+            disqualified, hired, pipeline, inactive.
+        sort_by: Sort order. Valid values: date-asc, date-desc, name-asc,
+            name-desc, job_name-asc, job_name-desc, score-asc, score-desc.
+        job_ids: Filter to applicants on these job IDs. Empty list returns all jobs.
+        locations: Filter by location IDs. Empty list returns all locations.
 
     Returns:
         List of applicant dicts with keys: id, name, profile_url, job_title,
         job_url, location, current_step.
     """
-    if job_id is not None:
-        # job_id triggers CareerPlug's pipeline-centric query mode, which uses
-        # entirely different params from the global applicant list view.
-        params = {
-            "app_link": "true",
-            "apps_hiring_pipeline_step": "all",
-            "apps_j[]": job_id,
-            "apps_job_status": "all",
-            "page": page,
-        }
-    else:
-        params = {"page": page, "status": status}
+    params: dict = {
+        "page": page,
+        "per_page": per_page,
+        "search": "",
+        "status": status,
+        "apps_sort": sort_by,
+        "apps_group": "none",
+        "apps_ids_bulk_toggle": "false",
+        "apps_hiring_pipeline_step": status,
+        "pipeline": "f",
+    }
+    if job_ids:
+        params["apps_j[]"] = job_ids
+    if locations:
+        params["apps_category[]"] = [f"location-{loc}" for loc in locations]
     html = await fetch_html("/manage/apps/list", params)
     return parse_applicants(html)
 
