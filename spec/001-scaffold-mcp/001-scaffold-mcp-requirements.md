@@ -13,10 +13,10 @@ Scaffold a FastMCP-based MCP server for CareerPlug with two stub tools: `list_jo
 
 - FR-1: The project uses `uv` for dependency management with a `pyproject.toml`.
 - FR-2: FastMCP is declared as a dependency.
-- FR-3: A server entry point exists at `src/careerplug_mcp/server.py`.
+- FR-3: A server entry point exists at `src/server.py`.
 - FR-4: `list_jobs` tool is registered on the server and returns an empty list.
 - FR-5: `list_applicants` tool is registered on the server and returns an empty list.
-- FR-6: The server can be started via `fastmcp run src/careerplug_mcp/server.py` or `uv run src/careerplug_mcp/server.py`.
+- FR-6: The server can be started via `fastmcp run src/server.py` or `uv run python src/server.py`.
 
 ## Non-Functional Requirements
 
@@ -53,11 +53,9 @@ Run (dev/inspector): fastmcp dev src/careerplug_mcp/server.py
 ## Project Structure
 
 ```
-pyproject.toml               → uv project config + dependencies
+pyproject.toml    → uv project config + dependencies
 src/
-  careerplug_mcp/
-    __init__.py              → package marker
-    server.py                → FastMCP server definition + tool registrations
+  server.py       → FastMCP server definition + tool registrations
 ```
 
 ## Code Style

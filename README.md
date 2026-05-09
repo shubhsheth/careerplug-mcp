@@ -28,13 +28,13 @@ uv sync
 **With an MCP client (stdio transport):**
 
 ```bash
-uv run python src/careerplug_mcp/server.py
+uv run python src/server.py
 ```
 
 **With the MCP inspector (browser UI for testing):**
 
 ```bash
-uv run fastmcp dev inspector src/careerplug_mcp/server.py
+uv run fastmcp dev inspector src/server.py
 ```
 
 ## Connecting to Claude Desktop
@@ -46,7 +46,7 @@ Add this to your `claude_desktop_config.json`:
   "mcpServers": {
     "careerplug": {
       "command": "uv",
-      "args": ["run", "python", "/path/to/careerplug-mcp/src/careerplug_mcp/server.py"]
+      "args": ["run", "python", "/path/to/careerplug-mcp/src/server.py"]
     }
   }
 }
