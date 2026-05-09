@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.14.3",
     "fastmcp>=3.2.4",
-    "playwright>=1.59.0",
+    "httpx>=0.28.1",
 ]

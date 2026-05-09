@@ -1,35 +1,68 @@
+import os
 import fastmcp
-from playwright.async_api import async_playwright, Page
+import httpx
+from bs4 import BeautifulSoup
 
 mcp = fastmcp.FastMCP("careerplug")
 
-_CDP_URL = "http://127.0.0.1:9222"
 _BASE = "https://app.careerplug.com"
+_SESSION_COOKIE = os.environ.get("CAREERPLUG_SESSION_COOKIE", "")
+_CSRF_TOKEN = os.environ.get("CAREERPLUG_CSRF_TOKEN", "")
+
+_client: httpx.AsyncClient | None = None
 
 
-async def _open_page(url: str) -> tuple:
-    """Connect to existing Chrome via CDP and open url. Returns (playwright, browser, page)."""
-    pw = await async_playwright().start()
-    browser = await pw.chromium.connect_over_cdp(_CDP_URL)
-    context = browser.contexts[0]
-    page = await context.new_page()
-    await page.goto(url, wait_until="networkidle", timeout=30_000)
-    return pw, browser, page
+def _get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None:
+        if not _SESSION_COOKIE or not _CSRF_TOKEN:
+            raise RuntimeError(
+                "Set CAREERPLUG_SESSION_COOKIE and CAREERPLUG_CSRF_TOKEN env vars before starting the server."
+            )
+        _client = httpx.AsyncClient(
+            base_url=_BASE,
+            cookies={"_career_plug_ats_session": _SESSION_COOKIE},
+            headers={
+                "X-CSRF-Token": _CSRF_TOKEN,
+                "Accept": "text/html, */*",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            follow_redirects=True,
+        )
+    return _client
 
 
-async def _close(pw, browser, page: Page) -> None:
-    await page.close()
-    await pw.stop()
+async def _fetch_html(path: str, params: dict) -> str:
+    r = await _get_client().get(path, params=params)
+    r.raise_for_status()
+    return r.text
+
+
+def _parse_applicants(html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    results = []
+    for row in soup.select("tr.app.index-item"):
+        a_name = row.select_one("td.td_applicant a")
+        a_job = row.select_one("td.td_applied-for a")
+        step = row.select_one("td.td_current-step .text-margin")
+        loc = row.select_one("td.td_applied-for span.subinfo")
+        results.append({
+            "id": row.get("data-id"),
+            "name": a_name.get_text(strip=True) if a_name else None,
+            "profile_url": a_name["href"] if a_name else None,
+            "job_title": a_job.get_text(strip=True) if a_job else None,
+            "job_url": a_job["href"] if a_job else None,
+            "location": loc.get_text(strip=True) if loc else None,
+            "current_step": step.get_text(strip=True) if step else None,
+        })
+    return results
 
 
 @mcp.tool
-async def get_page_html(url: str) -> str:
-    """Return the fully rendered HTML of any CareerPlug page. Temporary debug tool for DOM inspection."""
-    pw, browser, pg = await _open_page(url)
-    try:
-        return await pg.content()
-    finally:
-        await _close(pw, browser, pg)
+async def get_list_html(path: str, params: dict | None = None) -> str:
+    """Debug tool: fetch raw HTML from a CareerPlug list endpoint. E.g. path='/manage/jobs/list', params={'page': 1}."""
+    html = await _fetch_html(path, params or {})
+    return html
 
 
 @mcp.tool
@@ -39,14 +72,13 @@ async def list_jobs(
     refresh: bool = False,
 ) -> list:
     """List jobs from CareerPlug. status: None=all, 0=draft, 1=active, 2=closed, 3=passive."""
-    status_val = "" if status is None else str(status)
-    refresh_val = "1" if refresh else ""
-    url = f"{_BASE}/manage/jobs?page={page}&refresh={refresh_val}&status={status_val}"
-    pw, browser, pg = await _open_page(url)
-    try:
-        return []  # extraction logic deferred until DOM is inspected
-    finally:
-        await _close(pw, browser, pg)
+    params = {
+        "page": page,
+        "refresh": "1" if refresh else "",
+        "status": "" if status is None else status,
+    }
+    html = await _fetch_html("/manage/jobs/list", params)
+    return []  # jobs selector discovery pending — call get_list_html to inspect HTML
 
 
 @mcp.tool
@@ -57,18 +89,17 @@ async def list_applicants(
 ) -> list:
     """List applicants. status: active|new|in_process|disqualified|hired|pipeline|inactive. job_id filters to a specific job."""
     if job_id is not None:
-        url = (
-            f"{_BASE}/manage/apps"
-            f"?app_link=true&apps_hiring_pipeline_step=all"
-            f"&apps_j[]={job_id}&apps_job_status=all&page={page}"
-        )
+        params = {
+            "app_link": "true",
+            "apps_hiring_pipeline_step": "all",
+            "apps_j[]": job_id,
+            "apps_job_status": "all",
+            "page": page,
+        }
     else:
-        url = f"{_BASE}/manage/apps?page={page}&status={status}"
-    pw, browser, pg = await _open_page(url)
-    try:
-        return []  # extraction logic deferred until DOM is inspected
-    finally:
-        await _close(pw, browser, pg)
+        params = {"page": page, "status": status}
+    html = await _fetch_html("/manage/apps/list", params)
+    return _parse_applicants(html)
 
 
 if __name__ == "__main__":
