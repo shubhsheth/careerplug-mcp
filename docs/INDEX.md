@@ -73,19 +73,20 @@ BeautifulSoup backend to avoid a native dependency.
 
 ---
 
-## `list_applicants` Dual Code Path
+## `list_applicants` Query Parameters
 
-When `job_id` is provided to `list_applicants`, the URL parameters are entirely
-different from the global list view:
+`list_applicants` uses a single unified query mode. The params sent to
+`/manage/apps/list` are:
 
-| Mode | Params |
+| Param | Source |
 |---|---|
-| Global list (`job_id=None`) | `page`, `status` |
-| Job-specific (`job_id` set) | `app_link=true`, `apps_hiring_pipeline_step=all`, `apps_j[]`, `apps_job_status=all`, `page` |
+| `page`, `per_page`, `status`, `apps_sort` | caller-supplied |
+| `apps_j[]` | from `job_ids` arg (omitted when empty) |
+| `apps_category[]` | from `locations` arg, each formatted as `location-{id}` (omitted when empty) |
+| `search`, `apps_group`, `apps_ids_bulk_toggle`, `apps_hiring_pipeline_step`, `pipeline` | hardcoded; required for results to match the CareerPlug UI |
 
-This mirrors how CareerPlug's own frontend switches query modes between the
-global applicants page and the job detail page. It is not a filter layered on
-top of the global query — the two modes are independent.
+The old dual-code path (`job_id` triggering `app_link=true` / `apps_hiring_pipeline_step=all` params)
+has been removed. `job_ids` (a list) now replaces the single `job_id` parameter.
 
 ---
 
