@@ -99,6 +99,51 @@ def parse_applicant_details(html: str) -> dict:
     }
 
 
+def parse_applicant_documents(html: str) -> list[dict]:
+    """Extract uploaded documents from a ``/manage/apps/{id}?tab=documents`` page.
+
+    Args:
+        html: Raw HTML string returned by the endpoint.
+
+    Returns:
+        List of dicts with keys: ``name``, ``attachment_id``, ``download_url``,
+        ``uploaded_date``. Empty list if no documents are present.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    results = []
+    container = soup.select_one("#profile-applicant-documents")
+    if not container:
+        return results
+    for doc in container.select("[id^='profile-applicant-document-has_attachment_']"):
+        name_el = doc.select_one(".profile-applicant-documents__title")
+        download_el = doc.select_one(".profile-applicant-documents__download")
+        date_el = doc.select_one(".form-text.text-muted")
+
+        download_url = download_el["href"] if download_el else None
+        attachment_id = None
+        if download_url:
+            try:
+                attachment_id = int(download_url.rstrip("/").rsplit("/", 1)[-1])
+            except (ValueError, IndexError):
+                pass
+
+        uploaded_date = None
+        if date_el:
+            text = date_el.get_text(strip=True)
+            if text.startswith("Uploaded on "):
+                uploaded_date = text[len("Uploaded on "):]
+            else:
+                uploaded_date = text
+
+        results.append({
+            "name": name_el.get_text(strip=True) if name_el else None,
+            "attachment_id": attachment_id,
+            "download_url": download_url,
+            "uploaded_date": uploaded_date,
+        })
+    return results
+
+
 def parse_jobs(html: str) -> list[dict]:
     """Extract job records from a ``/manage/jobs/list`` HTML response.
 

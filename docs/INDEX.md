@@ -13,7 +13,8 @@ public API. The endpoints it targets are:
 
 - `/manage/jobs/list` — server-rendered HTML table of job listings
 - `/manage/apps/list` — server-rendered HTML table of applicants
-- `/manage/apps/{id}` — full applicant profile page
+- `/manage/apps/{id}` — full applicant profile page (overview tab)
+- `/manage/apps/{id}?tab=documents` — applicant documents tab
 
 ### Module Structure
 
@@ -66,6 +67,9 @@ Both endpoints return server-rendered HTML table rows, not JSON.
 
 - Jobs: `tr.job.index-item` rows in the `/manage/jobs/list` response
 - Applicants: `tr.app.index-item[data-id]` rows in the `/manage/apps/list` response
+- Applicant documents: `#profile-applicant-documents [id^="profile-applicant-document-has_attachment_"]`
+  rows in the `?tab=documents` page; name from `.profile-applicant-documents__title`,
+  download URL from `.profile-applicant-documents__download[href]`
 - Applicant detail: a full HTML page at `/manage/apps/{id}`; key selectors are
   `.profile-show__applicant-name` (first text node), `.profile-show__email a`,
   `.profile-show__phone a`, `.profile-show__job-activated`, `.profile-show__job-name`,

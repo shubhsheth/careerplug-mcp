@@ -2,7 +2,7 @@ import fastmcp
 import browser_cookie3
 
 from client import fetch_html
-from parsers import parse_jobs, parse_applicants, parse_applicant_details
+from parsers import parse_jobs, parse_applicants, parse_applicant_details, parse_applicant_documents
 
 mcp = fastmcp.FastMCP("careerplug")
 
@@ -106,6 +106,24 @@ async def get_applicant_details(app_id: int) -> dict:
     """
     html = await fetch_html(f"/manage/apps/{app_id}", {})
     return parse_applicant_details(html)
+
+
+@mcp.tool
+async def get_applicant_documents(app_id: int) -> list:
+    """List uploaded documents for a single applicant.
+
+    Args:
+        app_id: The numeric CareerPlug applicant ID.
+
+    Returns:
+        List of dicts with keys: name, attachment_id, download_url,
+        uploaded_date. Empty list if no documents have been uploaded.
+    """
+    html = await fetch_html(
+        f"/manage/apps/{app_id}",
+        {"tab": "documents", "linked_from_dupe": "false"},
+    )
+    return parse_applicant_documents(html)
 
 
 @mcp.tool
