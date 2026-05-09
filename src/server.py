@@ -2,7 +2,7 @@ import fastmcp
 import browser_cookie3
 
 from client import fetch_html
-from parsers import parse_jobs, parse_applicants
+from parsers import parse_jobs, parse_applicants, parse_applicant_details
 
 mcp = fastmcp.FastMCP("careerplug")
 
@@ -87,6 +87,25 @@ async def list_applicants(
         params["apps_category[]"] = [f"location-{loc}" for loc in locations]
     html = await fetch_html("/manage/apps/list", params)
     return parse_applicants(html)
+
+
+@mcp.tool
+async def get_applicant_details(app_id: int) -> dict:
+    """Fetch full profile for a single applicant.
+
+    Args:
+        app_id: The numeric CareerPlug applicant ID (visible in the URL,
+            e.g. 148657239 from ``/manage/apps/148657239``).
+
+    Returns:
+        Dict with keys: name, email, phone, applied_date, applied_via,
+        job_title, job_location, current_step, hiring_steps, is_duplicate.
+        ``hiring_steps`` is a list of dicts with ``name`` and ``status``
+        (``"current"``, ``"future"``, or ``"completed"``).
+        Fields absent from the page are ``None``.
+    """
+    html = await fetch_html(f"/manage/apps/{app_id}", {})
+    return parse_applicant_details(html)
 
 
 @mcp.tool

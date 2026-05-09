@@ -43,6 +43,7 @@ additional requests beyond the single page fetch.
   - `current_step` — name of the hiring step currently active (e.g. `"New Application"`)
   - `hiring_steps` — list of dicts, one per step, each with `name` (str) and
     `status` (`"current"`, `"future"`, or `"completed"`)
+  - `is_duplicate` — boolean; `True` if CareerPlug flagged this as a duplicate application
 - FR-4: Fields that cannot be found in the markup return `None` rather than
   raising an exception (consistent with existing parser behavior).
 - FR-5: The tool follows the established pattern: `fetch_html` → `parse_*` →
@@ -75,6 +76,8 @@ additional requests beyond the single page fetch.
   will verify empirically first.)
 - The "applied on / via" string format is always `"Applied on MM/DD/YYYY via
   Source"` and can be split by ` via `.
+- The "Applied for: TITLE, LOCATION" string uses `rsplit(", ", 1)` so job titles
+  containing commas are preserved; location is always the last segment.
 - The step status indicators use consistent CSS classes: `current` means active,
   `future` means not yet reached. Any step without an indicator `<i>` element
   will be treated as `completed` (it would have a checkmark icon instead).
