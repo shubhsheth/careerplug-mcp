@@ -23,6 +23,16 @@ async def _close(pw, browser, page: Page) -> None:
 
 
 @mcp.tool
+async def get_page_html(url: str) -> str:
+    """Return the fully rendered HTML of any CareerPlug page. Temporary debug tool for DOM inspection."""
+    pw, browser, pg = await _open_page(url)
+    try:
+        return await pg.content()
+    finally:
+        await _close(pw, browser, pg)
+
+
+@mcp.tool
 async def list_jobs(
     page: int = 1,
     status: int | None = None,
