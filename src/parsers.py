@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from bs4 import BeautifulSoup, NavigableString
 
 
@@ -210,3 +212,30 @@ def parse_applicants(html: str) -> list[dict]:
             "current_step": step.get_text(strip=True) if step else None,
         })
     return results
+
+
+def parse_attachment_s3_url(html: str, attachment_id: int) -> str:
+    """Find the pre-signed S3 URL for a specific attachment on the documents tab.
+
+    The URL is stored in ``data-pdf-text-layer-renderer-url`` on each rendered
+    PDF element. The attachment ID is encoded in the S3 path as three
+    slash-separated digit segments under ``/attachments/`` (e.g.
+    ``/attachments/209/946/715/`` encodes ``209946715``).
+
+    Args:
+        html: Raw HTML from ``/manage/apps/{id}?tab=documents``.
+        attachment_id: Numeric attachment ID to locate.
+
+    Returns:
+        The pre-signed S3 URL string.
+
+    Raises:
+        ValueError: If no URL matching ``attachment_id`` is found on the page.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    for el in soup.select("[data-pdf-text-layer-renderer-url]"):
+        url = el["data-pdf-text-layer-renderer-url"]
+        match = re.search(r"/attachments/([\d/]+)/", url)
+        if match and int(match.group(1).replace("/", "")) == attachment_id:
+            return url
+    raise ValueError(f"Attachment {attachment_id} not found on documents tab.")

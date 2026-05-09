@@ -1,10 +1,12 @@
 import asyncio
+import base64
 
 import fastmcp
+import httpx
 import browser_cookie3
 
 from client import fetch_html
-from parsers import parse_jobs, parse_applicants, parse_applicant_details, parse_applicant_documents
+from parsers import parse_jobs, parse_applicants, parse_applicant_details, parse_applicant_documents, parse_attachment_s3_url
 
 mcp = fastmcp.FastMCP("careerplug")
 
@@ -116,6 +118,34 @@ async def get_applicant_details(app_id: int) -> dict:
     result = parse_applicant_details(overview_html)
     result["documents"] = parse_applicant_documents(docs_html)
     return result
+
+
+@mcp.tool
+async def download_attachment(app_id: int, attachment_id: int) -> dict:
+    """Download a document attached to a CareerPlug applicant as raw PDF bytes.
+
+    Fetches the documents tab to obtain a fresh pre-signed S3 URL (valid for
+    10 seconds), then downloads the file directly from S3.
+
+    Args:
+        app_id: Numeric CareerPlug applicant ID.
+        attachment_id: Numeric attachment ID (from get_applicant_details documents list).
+
+    Returns:
+        Dict with keys:
+        - ``filename``: original filename (e.g. ``"Resume.pdf"``).
+        - ``content``: base64-encoded PDF bytes as a UTF-8 string.
+    """
+    docs_html = await fetch_html(
+        f"/manage/apps/{app_id}",
+        {"tab": "documents", "linked_from_dupe": "false"},
+    )
+    s3_url = parse_attachment_s3_url(docs_html, attachment_id)
+    filename = s3_url.split("?")[0].rsplit("/", 1)[-1]
+    async with httpx.AsyncClient() as client:
+        r = await client.get(s3_url)
+        r.raise_for_status()
+    return {"filename": filename, "content": base64.b64encode(r.content).decode()}
 
 
 @mcp.tool
