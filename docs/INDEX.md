@@ -67,19 +67,15 @@ Both endpoints return server-rendered HTML table rows, not JSON.
 
 - Jobs: `tr.job.index-item` rows in the `/manage/jobs/list` response
 - Applicants: `tr.app.index-item[data-id]` rows in the `/manage/apps/list` response
-- Applicant documents: `#profile-applicant-documents [id^="profile-applicant-document-has_attachment_"]`
-  rows in the `?tab=documents` page; name from `.profile-applicant-documents__title`,
-  download URL from `.profile-applicant-documents__download[href]`
 - Applicant detail: a full HTML page at `/manage/apps/{id}`; key selectors are
   `.profile-show__applicant-name` (first text node), `.profile-show__email a`,
   `.profile-show__phone a`, `.profile-show__job-activated`, `.profile-show__job-name`,
   and `#accordion .d-flex.flex-row` for the hiring pipeline steps
-- Applicant documents: fetched from the same URL with `?tab=documents`; document
-  rows are `#profile-applicant-documents [id^="profile-applicant-document-has_attachment_"]`;
-  name from `.profile-applicant-documents__title`, download URL from
-  `.profile-applicant-documents__download[href]`, date from `.form-text.text-muted`
-- `get_applicant_details` fetches both pages with `asyncio.gather` and merges the
-  results, returning a `documents` key alongside the profile fields
+- Applicant documents: `#profile-applicant-documents [id^="profile-applicant-document-has_attachment_"]`
+  rows in the `?tab=documents` page; name from `.profile-applicant-documents__title`,
+  download URL from `.profile-applicant-documents__download[href]`, date from
+  `.form-text.text-muted`; `get_applicant_details` fetches both pages in parallel
+  via `asyncio.gather` and returns documents under the `documents` key
 
 Selectors were discovered via live DOM inspection (see `spec/002`). If
 CareerPlug changes their markup, parsers silently return `None` for affected
