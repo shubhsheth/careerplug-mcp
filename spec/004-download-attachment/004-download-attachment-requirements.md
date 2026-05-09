@@ -1,100 +1,93 @@
-# Spec: download_attachment Tool
+# Spec: Inline PDF Text in get_applicant_details
 
 ## Objective
 
-Add an MCP tool `download_attachment` that retrieves the raw PDF bytes for a
-specific document attached to a CareerPlug applicant and returns them
-base64-encoded. The existing `get_applicant_details` tool surfaces document
-metadata (name, attachment ID, relative download URL) but cannot actually fetch
-the file — the relative URL requires session cookies and redirects through
-CareerPlug's proxy. This tool fetches a fresh pre-signed S3 URL from the
-documents tab and downloads the PDF directly from S3 before the URL expires.
+Consolidate PDF text extraction into `get_applicant_details` so callers receive
+document text in a single tool call. Previously, callers had to call
+`get_applicant_details` to get document metadata and then call
+`download_attachment` separately to get the text of each PDF. The separate tool
+is redundant because the documents-tab HTML (which contains the pre-signed S3
+URLs) is already fetched inside `get_applicant_details`.
 
-**User:** A recruiter or AI assistant that needs to read, summarize, or store an
-applicant's uploaded document (e.g. resume, cover letter).
+**User:** A recruiter or AI assistant that wants to read an applicant's resume or
+cover letter without issuing multiple tool calls.
 
-**Success looks like:** Calling `download_attachment(app_id=148598800,
-attachment_id=209946715)` returns a dict with `filename` and `content`
-(base64-encoded PDF bytes) that round-trips back to the original file.
+**Success looks like:** Calling `get_applicant_details(app_id=148598800)` returns
+a dict whose `documents` list includes a `text` key on each entry — populated
+with extracted text for PDFs, and a short explanatory string for non-PDFs.
+The `download_attachment` tool no longer exists.
 
 ---
 
 ## User Stories
 
-- As a recruiter, I want to download an applicant's resume so I can read it
-  outside CareerPlug.
-- As an AI assistant, I want the raw PDF bytes for an applicant's document so I
-  can pass them to a PDF parser for summarization.
+- As an AI assistant, I want `get_applicant_details` to return the full text of
+  every attached PDF so I can summarize a resume without making a second tool call.
+- As a recruiter, I want to see document content alongside profile metadata so I
+  can evaluate an applicant in one step.
 
 ---
 
 ## Functional Requirements
 
-- FR-1: The tool accepts two parameters: `app_id: int` and `attachment_id: int`.
-- FR-2: The tool fetches `/manage/apps/{app_id}?tab=documents&linked_from_dupe=false`
-  using the authenticated `fetch_html` client to obtain a fresh page containing
-  pre-signed S3 URLs.
-- FR-3: The tool locates the pre-signed S3 URL by finding all elements with a
-  `data-pdf-text-layer-renderer-url` attribute and selecting the one whose URL
-  path encodes `attachment_id`. The attachment ID is encoded in the S3 path as
-  `/attachments/A/B/C/` where the digits concatenate to form the ID (e.g.
-  `/attachments/209/946/715/` → `209946715`).
-- FR-4: If no matching S3 URL is found, the tool raises `ValueError` with a
-  message indicating the attachment was not found on the page.
-- FR-5: The tool immediately downloads the PDF from the S3 URL using a plain
-  `httpx.AsyncClient` with no CareerPlug auth headers (the pre-signed URL is
-  self-authenticating). The download must start within the URL's 10-second
-  expiry window.
-- FR-6: The tool returns a dict with two keys:
-  - `filename` — the original filename parsed from the last path segment of the
-    S3 URL before the query string (e.g. `"Carliyah_Jones_Resume.pdf"`).
-  - `content` — the PDF bytes base64-encoded as a UTF-8 string.
-- FR-7: The tool follows the established pattern: `fetch_html` for the documents
-  tab, a new `parse_attachment_s3_url(html, attachment_id)` parser, then a
-  direct S3 download. No direct use of `_get_client()`.
+- FR-1: `get_applicant_details` fetches the documents tab HTML exactly as it does
+  today (one `asyncio.gather` call alongside the overview tab).
+- FR-2: For each document entry returned by `parse_applicant_documents`, the tool
+  attempts to resolve a pre-signed S3 URL using `parse_attachment_s3_url`.
+- FR-3: If an S3 URL is found, the tool downloads the PDF from S3 with a plain
+  `httpx.AsyncClient` (no CareerPlug auth headers) and extracts all text via
+  `pypdf.PdfReader`. The extracted text is joined with `"\n"` and stored under
+  the `text` key of the document dict.
+- FR-4: All PDF downloads happen in parallel via `asyncio.gather` so total
+  latency is bounded by the slowest single download, not the sum.
+- FR-5: If `parse_attachment_s3_url` raises `ValueError` (attachment not found
+  on page), `text` is set to `None`.
+- FR-6: If the file is not a PDF (determined by attempting `pypdf.PdfReader` and
+  catching `pypdf.errors.PdfReadError`, or by the filename not ending in `.pdf`),
+  `text` is set to `"Not a PDF document — text extraction is not supported for
+  this file type."`.
+- FR-7: The `download_attachment` tool is removed from `src/server.py`.
+- FR-8: The `parse_attachment_s3_url` parser in `src/parsers.py` is retained
+  unchanged (it is still used by FR-2).
 
 ---
 
 ## Non-Functional Requirements
 
-- NFR-1: Uses `html.parser` as the BeautifulSoup backend — no new dependencies
-  beyond what is already installed (`httpx`, `beautifulsoup4`, `base64` stdlib).
-- NFR-2: The S3 download uses a fresh, short-lived `httpx.AsyncClient` (via
-  `async with`) rather than reusing the CareerPlug client, so no auth headers
-  leak to S3.
-- NFR-3: The fetch and download happen sequentially (not in parallel) because
-  the download URL depends on the fetch result.
+- NFR-1: No new dependencies. `pypdf` and `httpx` are already installed.
+- NFR-2: S3 downloads use a short-lived `httpx.AsyncClient` (via `async with`)
+  separate from the CareerPlug client so no auth headers leak to S3.
+- NFR-3: A single failure to download or parse one document must not abort the
+  entire `get_applicant_details` call; other documents and all profile fields
+  must still be returned.
 
 ---
 
 ## Out of Scope
 
 - Uploading or deleting attachments (write operations).
-- Extracting text from the PDF (requires a separate library).
-- Caching the S3 URL or PDF bytes between calls.
-- Handling multi-page or chunked downloads.
-- Returning anything other than raw bytes (no text extraction, no thumbnails).
+- Caching S3 URLs or PDF bytes between calls.
+- Extracting text from non-PDF formats (`.docx`, images, etc.).
+- Returning raw PDF bytes.
 
 ---
 
 ## Assumptions
 
-- Every attachment rendered on the documents tab has a corresponding
-  `.pdf-text-layer-renderer` element with `data-pdf-text-layer-renderer-url`.
-- The S3 URL path always encodes the attachment ID as three slash-separated
-  segments under `/attachments/` (e.g. `209/946/715` for `209946715`).
-- The pre-signed URL is valid for 10 seconds from page render; sequential
-  fetch→parse→download completes within that window under normal network
-  conditions.
-- A plain `httpx.AsyncClient` with default settings can reach S3 directly from
-  the server running the MCP tool.
+- Every PDF attachment rendered on the documents tab has a corresponding element
+  with `data-pdf-text-layer-renderer-url`; non-PDF attachments may not.
+- The S3 URL path encodes the attachment ID as three slash-separated segments
+  under `/attachments/` (e.g. `209/946/715` → `209946715`).
+- The pre-signed URL is valid for ~10 seconds; since `get_applicant_details`
+  fetches the docs HTML and immediately triggers downloads, the window is met
+  under normal network conditions.
 
 ---
 
 ## Tech Stack
 
-Python 3.11+, FastMCP, BeautifulSoup4 (`html.parser`), httpx, `base64` (stdlib)
-— no new dependencies.
+Python 3.11+, FastMCP, BeautifulSoup4 (`html.parser`), httpx, pypdf, asyncio —
+no new dependencies.
 
 ---
 
@@ -109,10 +102,10 @@ Run server: cd src && python server.py
 ## Project Structure
 
 ```
-src/server.py    → add @mcp.tool download_attachment
-src/parsers.py   → add parse_attachment_s3_url(html, attachment_id) -> str
-src/client.py    → no changes needed
-docs/INDEX.md    → update endpoint table and tool list
+src/server.py    → remove download_attachment; extend get_applicant_details
+src/parsers.py   → no changes (parse_attachment_s3_url retained)
+src/client.py    → no changes
+docs/INDEX.md    → remove download_attachment references; document text field
 ```
 
 ---
@@ -120,87 +113,68 @@ docs/INDEX.md    → update endpoint table and tool list
 ## Code Style
 
 ```python
-# parsers.py
-def parse_attachment_s3_url(html: str, attachment_id: int) -> str:
-    """Find the pre-signed S3 URL for a specific attachment on the documents tab.
-
-    Args:
-        html: Raw HTML from /manage/apps/{id}?tab=documents.
-        attachment_id: Numeric attachment ID to locate.
-
-    Returns:
-        The pre-signed S3 URL string.
-
-    Raises:
-        ValueError: If no URL matching attachment_id is found.
-    """
-    soup = BeautifulSoup(html, "html.parser")
-    for el in soup.select("[data-pdf-text-layer-renderer-url]"):
-        url = el["data-pdf-text-layer-renderer-url"]
-        # ID is encoded in S3 path as /attachments/A/B/C/; strip digits and join.
-        match = re.search(r"/attachments/([\d/]+)/", url)
-        if match and int(match.group(1).replace("/", "")) == attachment_id:
-            return url
-    raise ValueError(f"Attachment {attachment_id} not found on documents tab for this applicant.")
-
-
-# server.py
+# server.py — get_applicant_details (updated)
 @mcp.tool
-async def download_attachment(app_id: int, attachment_id: int) -> dict:
-    """Download a document attached to a CareerPlug applicant as raw PDF bytes.
-
-    Args:
-        app_id: Numeric CareerPlug applicant ID.
-        attachment_id: Numeric attachment ID (from get_applicant_details documents list).
-
-    Returns:
-        Dict with keys:
-        - ``filename``: original filename (e.g. ``"Resume.pdf"``).
-        - ``content``: base64-encoded PDF bytes as a UTF-8 string.
-    """
-    docs_html = await fetch_html(
-        f"/manage/apps/{app_id}",
-        {"tab": "documents", "linked_from_dupe": "false"},
+async def get_applicant_details(app_id: int) -> dict:
+    overview_html, docs_html = await asyncio.gather(
+        fetch_html(f"/manage/apps/{app_id}", {}),
+        fetch_html(f"/manage/apps/{app_id}", {"tab": "documents", "linked_from_dupe": "false"}),
     )
-    s3_url = parse_attachment_s3_url(docs_html, attachment_id)
-    filename = s3_url.split("?")[0].rsplit("/", 1)[-1]
-    async with httpx.AsyncClient() as client:
-        r = await client.get(s3_url)
-        r.raise_for_status()
-    return {"filename": filename, "content": base64.b64encode(r.content).decode()}
+    result = parse_applicant_details(overview_html)
+    docs = parse_applicant_documents(docs_html)
+
+    async def _extract_text(doc: dict) -> dict:
+        try:
+            s3_url = parse_attachment_s3_url(docs_html, doc["attachment_id"])
+        except ValueError:
+            return {**doc, "text": None}
+        filename = s3_url.split("?")[0].rsplit("/", 1)[-1]
+        if not filename.lower().endswith(".pdf"):
+            return {**doc, "text": "Not a PDF document — text extraction is not supported for this file type."}
+        async with httpx.AsyncClient() as client:
+            r = await client.get(s3_url)
+            r.raise_for_status()
+        try:
+            reader = pypdf.PdfReader(io.BytesIO(r.content))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        except pypdf.errors.PdfReadError:
+            text = "Not a PDF document — text extraction is not supported for this file type."
+        return {**doc, "text": text}
+
+    result["documents"] = list(await asyncio.gather(*[_extract_text(d) for d in docs]))
+    return result
 ```
 
 ---
 
 ## Testing Strategy
 
-Manual verification: call `download_attachment(app_id=148598800, attachment_id=209946715)`
-and confirm:
-- Returns a dict with `filename` and `content` keys.
-- `filename` matches the uploaded file name (e.g. `"Carliyah_Jones_Resume.pdf"`).
-- `base64.b64decode(result["content"])` starts with `%PDF-` (valid PDF magic bytes).
-- Calling with a nonexistent `attachment_id` raises `ValueError`.
+Manual verification: call `get_applicant_details(app_id=<id>)` and confirm:
+- Returns a dict with all existing profile fields intact.
+- `documents` is a list; each entry has `name`, `attachment_id`, `download_url`,
+  `uploaded_date`, and `text`.
+- For a PDF attachment, `text` is a non-empty string starting with readable content.
+- For a non-PDF attachment (if one exists), `text` is the explanatory string.
+- If `attachment_id` is absent or not found, `text` is `None`.
 
 ---
 
 ## Boundaries
 
-- **Always:** Use `fetch_html` for the CareerPlug request; use a plain
-  `httpx.AsyncClient` (no auth headers) for the S3 download; parse the S3 URL
-  with `parse_attachment_s3_url` in `parsers.py`.
-- **Ask first:** Adding new dependencies; changing `client.py`; changing the
-  return format.
+- **Always:** Use `fetch_html` for CareerPlug requests; use a plain
+  `httpx.AsyncClient` for S3 downloads; keep `parse_attachment_s3_url` in
+  `parsers.py`.
+- **Ask first:** Adding new dependencies; changing `client.py`.
 - **Never:** Make write/POST requests; store credentials; reuse the CareerPlug
-  client for the S3 download.
+  client for S3 downloads.
 
 ---
 
 ## Success Criteria
 
-1. `download_attachment(app_id, attachment_id)` returns a dict with `filename`
-   and `content`.
-2. `base64.b64decode(result["content"])` starts with `%PDF-`.
-3. `filename` matches the name of the uploaded file.
-4. Passing a nonexistent `attachment_id` raises `ValueError`.
-5. The tool appears in the FastMCP tool list.
-6. No existing tools are broken.
+1. `get_applicant_details(app_id)` returns documents with a `text` field.
+2. PDF documents have non-empty extracted text.
+3. Non-PDF documents have the explanatory string instead of `None` or an error.
+4. A single document download failure does not abort the whole call.
+5. `download_attachment` no longer appears in the FastMCP tool list.
+6. All other tools (`list_jobs`, `list_applicants`, `debug_cookie_search`) still work.

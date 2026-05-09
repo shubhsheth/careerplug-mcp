@@ -96,7 +96,7 @@ async def list_applicants(
 
 @mcp.tool
 async def get_applicant_details(app_id: int) -> dict:
-    """Fetch full profile for a single applicant, including uploaded documents.
+    """Fetch full profile for a single applicant, including uploaded documents with text.
 
     Args:
         app_id: The numeric CareerPlug applicant ID (visible in the URL,
@@ -109,7 +109,9 @@ async def get_applicant_details(app_id: int) -> dict:
         ``hiring_steps`` is a list of dicts with ``name`` and ``status``
         (``"current"``, ``"future"``, or ``"completed"``).
         ``documents`` is a list of dicts with ``name``, ``attachment_id``,
-        ``download_url``, and ``uploaded_date``.
+        ``download_url``, ``uploaded_date``, and ``text``.
+        ``text`` contains extracted PDF text, an explanatory string for
+        non-PDF files, or ``None`` if the S3 URL could not be resolved.
         Fields absent from the page are ``None``.
     """
     overview_html, docs_html = await asyncio.gather(
@@ -117,38 +119,28 @@ async def get_applicant_details(app_id: int) -> dict:
         fetch_html(f"/manage/apps/{app_id}", {"tab": "documents", "linked_from_dupe": "false"}),
     )
     result = parse_applicant_details(overview_html)
-    result["documents"] = parse_applicant_documents(docs_html)
+
+    async def _extract_text(doc: dict) -> dict:
+        try:
+            s3_url = parse_attachment_s3_url(docs_html, doc["attachment_id"])
+        except ValueError:
+            return {**doc, "text": None}
+        filename = s3_url.split("?")[0].rsplit("/", 1)[-1]
+        if not filename.lower().endswith(".pdf"):
+            return {**doc, "text": "Not a PDF document — text extraction is not supported for this file type."}
+        async with httpx.AsyncClient() as client:
+            r = await client.get(s3_url)
+            r.raise_for_status()
+        try:
+            reader = pypdf.PdfReader(io.BytesIO(r.content))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        except pypdf.errors.PdfReadError:
+            text = "Not a PDF document — text extraction is not supported for this file type."
+        return {**doc, "text": text}
+
+    docs = parse_applicant_documents(docs_html)
+    result["documents"] = list(await asyncio.gather(*[_extract_text(d) for d in docs]))
     return result
-
-
-@mcp.tool
-async def download_attachment(app_id: int, attachment_id: int) -> dict:
-    """Download a document attached to a CareerPlug applicant and return its text.
-
-    Fetches the documents tab to obtain a fresh pre-signed S3 URL (valid for
-    10 seconds), downloads the PDF from S3, and extracts the text content.
-
-    Args:
-        app_id: Numeric CareerPlug applicant ID.
-        attachment_id: Numeric attachment ID (from get_applicant_details documents list).
-
-    Returns:
-        Dict with keys:
-        - ``filename``: original filename (e.g. ``"Resume.pdf"``).
-        - ``text``: extracted text content of the PDF.
-    """
-    docs_html = await fetch_html(
-        f"/manage/apps/{app_id}",
-        {"tab": "documents", "linked_from_dupe": "false"},
-    )
-    s3_url = parse_attachment_s3_url(docs_html, attachment_id)
-    filename = s3_url.split("?")[0].rsplit("/", 1)[-1]
-    async with httpx.AsyncClient() as client:
-        r = await client.get(s3_url)
-        r.raise_for_status()
-    reader = pypdf.PdfReader(io.BytesIO(r.content))
-    text = "\n".join(page.extract_text() or "" for page in reader.pages)
-    return {"filename": filename, "text": text}
 
 
 @mcp.tool
