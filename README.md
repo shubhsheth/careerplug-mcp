@@ -11,6 +11,14 @@ An MCP server for CareerPlug, built with [FastMCP](https://gofastmcp.com).
 
 ## Setup
 
+Install `uv` if you don't have it:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then install dependencies:
+
 ```bash
 uv sync
 ```
