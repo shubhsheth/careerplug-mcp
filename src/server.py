@@ -1,8 +1,10 @@
+import asyncio
+
 import fastmcp
 import browser_cookie3
 
 from client import fetch_html
-from parsers import parse_jobs, parse_applicants
+from parsers import parse_jobs, parse_applicants, parse_applicant_details, parse_applicant_documents
 
 mcp = fastmcp.FastMCP("careerplug")
 
@@ -87,6 +89,33 @@ async def list_applicants(
         params["apps_category[]"] = [f"location-{loc}" for loc in locations]
     html = await fetch_html("/manage/apps/list", params)
     return parse_applicants(html)
+
+
+@mcp.tool
+async def get_applicant_details(app_id: int) -> dict:
+    """Fetch full profile for a single applicant, including uploaded documents.
+
+    Args:
+        app_id: The numeric CareerPlug applicant ID (visible in the URL,
+            e.g. 148657239 from ``/manage/apps/148657239``).
+
+    Returns:
+        Dict with keys: name, email, phone, applied_date, applied_via,
+        job_title, job_location, current_step, hiring_steps, is_duplicate,
+        documents.
+        ``hiring_steps`` is a list of dicts with ``name`` and ``status``
+        (``"current"``, ``"future"``, or ``"completed"``).
+        ``documents`` is a list of dicts with ``name``, ``attachment_id``,
+        ``download_url``, and ``uploaded_date``.
+        Fields absent from the page are ``None``.
+    """
+    overview_html, docs_html = await asyncio.gather(
+        fetch_html(f"/manage/apps/{app_id}", {}),
+        fetch_html(f"/manage/apps/{app_id}", {"tab": "documents", "linked_from_dupe": "false"}),
+    )
+    result = parse_applicant_details(overview_html)
+    result["documents"] = parse_applicant_documents(docs_html)
+    return result
 
 
 @mcp.tool
