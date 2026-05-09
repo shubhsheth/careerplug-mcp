@@ -70,8 +70,13 @@ async def list_applicants(
     params: dict = {
         "page": page,
         "per_page": per_page,
+        "search": "",
         "status": status,
         "apps_sort": sort_by,
+        "apps_group": "none",
+        "apps_ids_bulk_toggle": "false",
+        "apps_hiring_pipeline_step": status,
+        "pipeline": "f",
     }
     if job_ids:
         params["apps_j[]"] = job_ids
