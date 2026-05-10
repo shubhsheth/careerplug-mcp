@@ -75,7 +75,8 @@ Both endpoints return server-rendered HTML table rows, not JSON.
   rows in the `?tab=documents` page; name from `.profile-applicant-documents__title`,
   download URL from `.profile-applicant-documents__download[href]`, date from
   `.form-text.text-muted`; `get_applicant_details` fetches both pages in parallel
-  via `asyncio.gather` and returns documents under the `documents` key
+  via `asyncio.gather`, then downloads and extracts text from all PDF attachments
+  in parallel, and returns documents (with a `text` field) under the `documents` key
 
 Selectors were discovered via live DOM inspection (see `spec/002`). If
 CareerPlug changes their markup, parsers silently return `None` for affected
