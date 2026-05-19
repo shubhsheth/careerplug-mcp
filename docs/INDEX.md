@@ -113,6 +113,14 @@ has been removed. `job_ids` (a list) now replaces the single `job_id` parameter.
 
 ---
 
+## Building HTML Artifacts
+
+When building dashboards or HTML artifact UIs that call MCP tools from the
+browser, see [`docs/cowork-api.md`](cowork-api.md) for the `window.cowork`
+API reference, including CDN restrictions (Tailwind is blocked; use inline styles).
+
+---
+
 ## Adding a New Tool
 
 Follow this pattern:
