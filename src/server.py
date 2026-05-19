@@ -1,5 +1,6 @@
 import asyncio
 import io
+from pathlib import Path
 
 import fastmcp
 import httpx
@@ -10,6 +11,14 @@ from client import fetch_html
 from parsers import parse_jobs, parse_applicants, parse_applicant_details, parse_applicant_documents, parse_attachment_s3_url
 
 mcp = fastmcp.FastMCP("careerplug")
+
+_DASHBOARD_HTML = Path(__file__).parent.parent / "index.html"
+
+
+@mcp.resource("careerplug://dashboard", mime_type="text/html")
+def dashboard() -> str:
+    """Return the CareerPlug dashboard HTML page."""
+    return _DASHBOARD_HTML.read_text()
 
 
 @mcp.tool
