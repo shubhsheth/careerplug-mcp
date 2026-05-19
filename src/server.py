@@ -15,6 +15,7 @@ mcp = fastmcp.FastMCP("careerplug")
 _DASHBOARD_HTML = Path(__file__).parent.parent / "index.html"
 
 
+@mcp.resource("careerplug://dashboard", mime_type="text/html")
 @mcp.tool
 def get_dashboard() -> str:
     """Return the CareerPlug dashboard as an HTML string."""
