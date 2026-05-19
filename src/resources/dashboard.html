@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Cowork</title>
+    <!-- CSS is embedded below — no external dependencies -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif; }
+      button { font-family: inherit; }
+
+      /* Layout */
+      .flex { display: flex; }
+      .flex-col { flex-direction: column; }
+      .flex-1 { flex: 1 1 0%; }
+      .flex-wrap { flex-wrap: wrap; }
+      .shrink-0 { flex-shrink: 0; }
+      .min-w-0 { min-width: 0; }
+      .items-center { align-items: center; }
+      .justify-between { justify-content: space-between; }
+      .overflow-hidden { overflow: hidden; }
+      .overflow-y-auto { overflow-y: auto; }
+      .relative { position: relative; }
+      .absolute { position: absolute; }
+      .pointer-events-none { pointer-events: none; }
+
+      /* Sizing */
+      .h-screen { height: 100vh; }
+      .w-4 { width: 1rem; }
+      .h-4 { height: 1rem; }
+      .w-6 { width: 1.5rem; }
+      .w-56 { width: 14rem; }
+      .w-60 { width: 15rem; }
+      .w-full { width: 100%; }
+      .max-w-xs { max-width: 20rem; }
+
+      /* Spacing */
+      .p-6 { padding: 1.5rem; }
+      .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+      .px-4 { padding-left: 1rem; padding-right: 1rem; }
+      .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+      .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+      .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+      .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+      .pt-3 { padding-top: 0.75rem; }
+      .pt-4 { padding-top: 1rem; }
+      .pb-1 { padding-bottom: 0.25rem; }
+      .pb-2 { padding-bottom: 0.5rem; }
+      .pl-8 { padding-left: 2rem; }
+      .pr-2 { padding-right: 0.5rem; }
+      .pr-3 { padding-right: 0.75rem; }
+      .pr-4 { padding-right: 1rem; }
+      .mb-1 { margin-bottom: 0.25rem; }
+      .mb-6 { margin-bottom: 1.5rem; }
+      .gap-1 { gap: 0.25rem; }
+      .gap-2 { gap: 0.5rem; }
+      .gap-3 { gap: 0.75rem; }
+
+      /* Position helpers */
+      .left-2\.5 { left: 0.625rem; }
+      .top-1\/2 { top: 50%; }
+      .-translate-y-1\/2 { transform: translateY(-50%); }
+
+      /* Typography */
+      .text-xs { font-size: 0.75rem; line-height: 1rem; }
+      .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+      .text-base { font-size: 1rem; line-height: 1.5rem; }
+      .font-medium { font-weight: 500; }
+      .font-semibold { font-weight: 600; }
+      .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .uppercase { text-transform: uppercase; }
+      .tracking-wide { letter-spacing: 0.025em; }
+      .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .text-left { text-align: left; }
+      .text-center { text-align: center; }
+      .select-none { user-select: none; }
+      .cursor-pointer { cursor: pointer; }
+
+      /* Colors — text */
+      .text-white { color: #fff; }
+      .text-gray-300 { color: #d1d5db; }
+      .text-gray-400 { color: #9ca3af; }
+      .text-gray-500 { color: #6b7280; }
+      .text-gray-600 { color: #4b5563; }
+      .text-gray-700 { color: #374151; }
+      .text-gray-800 { color: #1f2937; }
+      .text-yellow-400 { color: #facc15; }
+      .text-yellow-500 { color: #eab308; }
+      .text-emerald-600 { color: #059669; }
+      .text-amber-500 { color: #f59e0b; }
+      .text-orange-500 { color: #f97316; }
+
+      /* Colors — background */
+      .bg-white { background-color: #fff; }
+      .bg-gray-50 { background-color: #f9fafb; }
+      .bg-gray-100 { background-color: #f3f4f6; }
+      .bg-gray-800 { background-color: #1f2937; }
+
+      /* Borders */
+      .border { border: 1px solid #e5e7eb; }
+      .border-r { border-right: 1px solid #e5e7eb; }
+      .border-b { border-bottom: 1px solid #e5e7eb; }
+      .border-t { border-top: 1px solid #e5e7eb; }
+      .border-gray-100 { border-color: #f3f4f6; }
+      .border-gray-200 { border-color: #e5e7eb; }
+      .border-gray-800 { border-color: #1f2937; }
+      .rounded { border-radius: 0.25rem; }
+
+      /* Misc */
+      .opacity-50 { opacity: 0.5; }
+      .bg-transparent { background-color: transparent; }
+      .border-0 { border: 0; }
+      .p-0 { padding: 0; }
+
+      /* Hover */
+      .hover\:bg-gray-50:hover { background-color: #f9fafb; }
+      .hover\:text-gray-300:hover { color: #d1d5db; }
+      .hover\:text-gray-700:hover { color: #374151; }
+      .hover\:text-yellow-400:hover { color: #facc15; }
+
+      /* Focus */
+      .focus\:outline-none:focus { outline: none; }
+      .focus\:ring-1:focus { box-shadow: 0 0 0 1px #d1d5db; }
+      .focus\:ring-gray-300:focus { box-shadow: 0 0 0 1px #d1d5db; }
+    </style>
+  </head>
+  <body class="flex flex-col h-screen text-sm bg-gray-50">
+    <div class="flex flex-1 overflow-hidden">
+      <aside
+        class="w-60 border-r bg-white flex flex-col shrink-0"
+        id="sidebar"
+      ></aside>
+      <main class="flex-1 overflow-y-auto p-6" id="main"></main>
+    </div>
+
+    <div id="devbar" style="height:160px;background:#111;color:#e5e7eb;font-family:monospace;font-size:11px;display:flex;flex-direction:column;border-top:1px solid #374151;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #374151;background:#1f2937;">
+        <span style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Debug Console</span>
+        <button onclick="document.getElementById('devbar-logs').innerHTML=''" style="color:#6b7280;font-size:10px;background:none;border:none;cursor:pointer;">Clear</button>
+      </div>
+      <div id="devbar-logs" style="flex:1;overflow-y:auto;padding:6px 10px;"></div>
+    </div>
+
+    <script>
+      (function() {
+        const log = document.getElementById('devbar-logs');
+        const colors = { log: '#e5e7eb', warn: '#fbbf24', error: '#f87171', info: '#60a5fa' };
+        function capture(level) {
+          const orig = console[level].bind(console);
+          console[level] = (...args) => {
+            orig(...args);
+            const line = document.createElement('div');
+            line.style.cssText = `color:${colors[level]};padding:1px 0;white-space:pre-wrap;word-break:break-all;`;
+            line.textContent = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ');
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+          };
+        }
+        ['log','warn','error','info'].forEach(capture);
+        window.addEventListener('unhandledrejection', e => console.error('Unhandled rejection:', e.reason));
+      })();
+    </script>
+
+    <script>
+      const USE_FAKE_DATA = new URLSearchParams(window.location.search).has(
+        "fakeData",
+      );
+
+      /* ── Fake data (used when ?fakeData is in the URL) ───────────────── */
+
+      const FAKE_JOBS = [
+        {
+          id: "3405263",
+          title: "Dermatology Medical Assistant - Full Time",
+          job_url: "/manage/jobs/3405263",
+          status: "Active",
+          location: "Elite Dermatology- Vintage Park - HOUSTON, TX 77070",
+          applicant_count: 16,
+          posted_date: "05/12/2026",
+        },
+        {
+          id: "3399171",
+          title: "Mohs Histo Technician - Part Time",
+          job_url: "/manage/jobs/3399171",
+          status: "Active",
+          location: "Elite Dermatology- River Oaks - Houston, TX 77019",
+          applicant_count: 6,
+          posted_date: "05/08/2026",
+        },
+        {
+          id: "3388400",
+          title: "Dermatology Medical Assistant - Full Time",
+          job_url: "/manage/jobs/3388400",
+          status: "Active",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 66,
+          posted_date: "05/01/2026",
+        },
+        {
+          id: "3386314",
+          title: "Medical Assistant for Dermatology Practice - Full Time",
+          job_url: "/manage/jobs/3386314",
+          status: "Active",
+          location: "Elite Dermatology- Pearland - Pearland, TX 77581",
+          applicant_count: 264,
+          posted_date: "04/30/2026",
+        },
+        {
+          id: "3374363",
+          title: "Dermatology Medical Assistant - Full Time",
+          job_url: "/manage/jobs/3374363",
+          status: "Closed",
+          location: "Elite Dermatology- Heights - Houston, TX 77008",
+          applicant_count: 104,
+          posted_date: "04/23/2026",
+        },
+        {
+          id: "3374327",
+          title: "Practice Manager - Full Time",
+          job_url: "/manage/jobs/3374327",
+          status: "Closed",
+          location: "Houston - Houston, TX 77008",
+          applicant_count: 92,
+          posted_date: "04/23/2026",
+        },
+        {
+          id: "3364548",
+          title: "Medical Receptionist - Full Time",
+          job_url: "/manage/jobs/3364548",
+          status: "Closed",
+          location: "Elite Dermatology- Pearland - Pearland, TX 77581",
+          applicant_count: 53,
+          posted_date: "04/17/2026",
+        },
+        {
+          id: "3337410",
+          title: "Medical Receptionist - Full Time",
+          job_url: "/manage/jobs/3337410",
+          status: "Active",
+          location: "Elite Dermatology- Vintage Park - HOUSTON, TX 77070",
+          applicant_count: 199,
+          posted_date: "03/31/2026",
+        },
+        {
+          id: "3337386",
+          title: "Medical Assistant for Dermatology Practice - Full Time",
+          job_url: "/manage/jobs/3337386",
+          status: "Closed",
+          location: "Elite Dermatology- Vintage Park - HOUSTON, TX 77070",
+          applicant_count: 0,
+          posted_date: "03/31/2026",
+        },
+        {
+          id: "3265532",
+          title: "Body Plastic Surgeon - Full Time",
+          job_url: "/manage/jobs/3265532",
+          status: "Active",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 0,
+          posted_date: "05/11/2026",
+        },
+        {
+          id: "3170649",
+          title: "Medical Assistant for Dermatology Practice - Full Time",
+          job_url: "/manage/jobs/3170649",
+          status: "Closed",
+          location: "Houston - Houston, TX 77008",
+          applicant_count: 0,
+          posted_date: "11/11/2025",
+        },
+        {
+          id: "3146211",
+          title: "Medical Assistant for Dermatology Practice - Full Time",
+          job_url: "/manage/jobs/3146211",
+          status: "Closed",
+          location: "Elite Dermatology- Pearland - Pearland, TX 77581",
+          applicant_count: 0,
+          posted_date: "10/20/2025",
+        },
+        {
+          id: "3140099",
+          title: "Plastic Surgery Patient Care Coordinator - Full Time",
+          job_url: "/manage/jobs/3140099",
+          status: "Closed",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 0,
+          posted_date: "01/14/2026",
+        },
+        {
+          id: "3137884",
+          title: "Mohs Histotechnologist / Mohs Histotechnician - Part Time",
+          job_url: "/manage/jobs/3137884",
+          status: "Closed",
+          location: "Elite Dermatology- Kingwood - KINGWOOD, TX 77345",
+          applicant_count: 0,
+          posted_date: "10/13/2025",
+        },
+        {
+          id: "3137841",
+          title: "Mohs Histotechnologist / Mohs Histotechnician - Full Time",
+          job_url: "/manage/jobs/3137841",
+          status: "Closed",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 0,
+          posted_date: "10/13/2025",
+        },
+        {
+          id: "2574774",
+          title: "Dermatology Front Desk/ Receptionist - Full Time",
+          job_url: "/manage/jobs/2574774",
+          status: "Active",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 49,
+          posted_date: "03/03/2026",
+        },
+        {
+          id: "2448606",
+          title: "Physician Assistant - Full Time",
+          job_url: "/manage/jobs/2448606",
+          status: "Active",
+          location: "Houston - Houston, TX 77008",
+          applicant_count: 9,
+          posted_date: "04/28/2026",
+        },
+        {
+          id: "2298774",
+          title: "Dermatology Clinic Manager - Full Time",
+          job_url: "/manage/jobs/2298774",
+          status: "Closed",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 0,
+          posted_date: "08/20/2025",
+        },
+        {
+          id: "2298771",
+          title: "Medical and Cosmetic Receptionist - Full Time",
+          job_url: "/manage/jobs/2298771",
+          status: "Closed",
+          location: "Elite Dermatology- River Oaks - Houston, TX 77019",
+          applicant_count: 246,
+          posted_date: "02/10/2026",
+        },
+        {
+          id: "2298770",
+          title: "Plastic Surgery Medical Assistant - Full Time - Full Time",
+          job_url: "/manage/jobs/2298770",
+          status: "Closed",
+          location: "Elite Dermatology- Fulshear - Fulshear, TX 77441",
+          applicant_count: 0,
+          posted_date: "01/14/2026",
+        },
+      ];
+
+      const FAKE_APPLICANTS = [
+        {
+          id: "149280305",
+          name: "Mellissa Kolk",
+          profile_url: "/manage/apps/149280305",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149279303",
+          name: "Elizabeth Ewing",
+          profile_url: "/manage/apps/149279303",
+          job_title: "Dermatology Front Desk/ Receptionist",
+          job_url: "/manage/jobs/2574774",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149275362",
+          name: "Lumina Dhakal",
+          profile_url: "/manage/apps/149275362",
+          job_title: "Medical Receptionist",
+          job_url: "/manage/jobs/3337410",
+          location: "Elite Dermatology- Vintage ParkFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149273324",
+          name: "Arneko Mckennis",
+          profile_url: "/manage/apps/149273324",
+          job_title: "Dermatology Medical Assistant",
+          job_url: "/manage/jobs/3388400",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149271204",
+          name: "Lacey Malone",
+          profile_url: "/manage/apps/149271204",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149265410",
+          name: "Desirea Cordoba",
+          profile_url: "/manage/apps/149265410",
+          job_title: "Dermatology Medical Assistant",
+          job_url: "/manage/jobs/3388400",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149264654",
+          name: "Lorraine Rios",
+          profile_url: "/manage/apps/149264654",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149262297",
+          name: "Kimberlee Hathaway",
+          profile_url: "/manage/apps/149262297",
+          job_title: "Dermatology Medical Assistant",
+          job_url: "/manage/jobs/3388400",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149262199",
+          name: "Kimberlee Hathaway",
+          profile_url: "/manage/apps/149262199",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149262055",
+          name: "Brianna Brisco",
+          profile_url: "/manage/apps/149262055",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149261615",
+          name: "Lyndee Salinas",
+          profile_url: "/manage/apps/149261615",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149257485",
+          name: "Paula Rivera",
+          profile_url: "/manage/apps/149257485",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149257255",
+          name: "Mariah Gallegos",
+          profile_url: "/manage/apps/149257255",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149257011",
+          name: "Estrellita Luna",
+          profile_url: "/manage/apps/149257011",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149256175",
+          name: "Joanna Jones",
+          profile_url: "/manage/apps/149256175",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149251973",
+          name: "Sylvia Zhao",
+          profile_url: "/manage/apps/149251973",
+          job_title: "Dermatology Medical Assistant",
+          job_url: "/manage/jobs/3405263",
+          location: "Elite Dermatology- Vintage ParkFull Time",
+          current_step: "First Interview",
+        },
+        {
+          id: "149250126",
+          name: "ABIA KALEEMULLAH",
+          profile_url: "/manage/apps/149250126",
+          job_title: "Dermatology Medical Assistant",
+          job_url: "/manage/jobs/3388400",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149249408",
+          name: "Jacqueline duque",
+          profile_url: "/manage/apps/149249408",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_url: "/manage/jobs/3386314",
+          location: "Elite Dermatology- PearlandFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149248881",
+          name: "Kelly Mateer",
+          profile_url: "/manage/apps/149248881",
+          job_title: "Dermatology Front Desk/ Receptionist",
+          job_url: "/manage/jobs/2574774",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+        {
+          id: "149248016",
+          name: "KENNEDI DAVIS",
+          profile_url: "/manage/apps/149248016",
+          job_title: "Dermatology Medical Assistant",
+          job_url: "/manage/jobs/3388400",
+          location: "Elite Dermatology- FulshearFull Time",
+          current_step: "New",
+        },
+      ];
+
+      const FAKE_APPLICANT_DETAILS = [
+        {
+          name: "Lumina Dhakal",
+          email: "lumina.dhakal@gmail.com",
+          phone: "832-908-3174",
+          applied_date: "05/18/2026",
+          applied_via: "Careers Page",
+          job_title: "Medical Receptionist",
+          job_location: "Elite Dermatology- Vintage Park",
+          current_step: "New Application",
+          grade: "B",
+          score: 72,
+          yoe: 0,
+          skills: ["Research", "Lab Techniques", "R Code", "Data Analysis"],
+          is_duplicate: false,
+        },
+        {
+          name: "Elizabeth Ewing",
+          email: "ewinglele@icloud.com",
+          phone: "1713-373-1247",
+          applied_date: "05/18/2026",
+          applied_via: "Indeed Apply",
+          job_title: "Dermatology Front Desk/ Receptionist",
+          job_location: "Elite Dermatology- Fulshear",
+          current_step: "New Application",
+          grade: "C",
+          score: 58,
+          yoe: 1,
+          skills: ["Receptionist", "Customer Service", "Communication"],
+          is_duplicate: false,
+        },
+        {
+          name: "Mellissa Kolk",
+          email: "billing.mellissaaa@gmail.com",
+          phone: "1702-830-2850",
+          applied_date: "05/18/2026",
+          applied_via: "Indeed Organic Jobs",
+          job_title: "Medical Assistant for Dermatology Practice",
+          job_location: "Elite Dermatology- Pearland",
+          current_step: "New Application",
+          grade: "A",
+          score: 88,
+          yoe: 8,
+          skills: [
+            "Phlebotomy",
+            "Medical Assisting",
+            "CLIA/OSHA",
+            "Specimen Processing",
+          ],
+          is_duplicate: false,
+        },
+      ];
+
+      /* ── MCP tool calls ─────────────────────────────────────────────── */
+
+      function unwrapMcp(res) {
+        // Response shape: { content: [{ type: "text", text: "<json string>" }] }
+        const text = res?.content?.[0]?.text;
+        if (text) return JSON.parse(text);
+        return res?.result ?? res;
+      }
+
+      async function list_jobs() {
+        console.log("[cowork] list_jobs: calling MCP tool");
+        const res = await window.cowork.callMcpTool("mcp__careerplug__list_jobs", {
+          per_page: 50,
+          sort_by: "jobs.created_at",
+          sort_direction: "DESC",
+        });
+        console.log("[cowork] list_jobs raw response:", res);
+        const data = unwrapMcp(res) ?? [];
+        console.log("[cowork] list_jobs resolved:", data);
+        return data;
+      }
+
+      async function list_applicants(jobId) {
+        console.log("[cowork] list_applicants: calling for job", jobId);
+        const res = await window.cowork.callMcpTool("mcp__careerplug__list_applicants", {
+          job_ids: [parseInt(jobId)],
+          status: "active",
+          per_page: 50,
+          sort_by: "date-desc",
+        });
+        console.log("[cowork] list_applicants raw response:", res);
+        const data = unwrapMcp(res) ?? [];
+        console.log("[cowork] list_applicants resolved:", data);
+        return data;
+      }
+
+      async function get_applicant_details(id) {
+        const res = await window.cowork.callMcpTool("mcp__careerplug__get_applicant_details", {
+          app_id: parseInt(id),
+        });
+        return unwrapMcp(res);
+      }
+
+      /* ── Runtime data (populated on init / job select) ──────────────── */
+
+      let JOBS = [];
+      let APPLICANTS = [];
+
+      /* ── State ───────────────────────────────────────────────────────── */
+
+      let selectedJobId = null;
+      let showStarred = false;
+      let sortCol = null;
+      let sortDir = 1; // 1 = asc, -1 = desc
+      let filterQ = "";
+      let filterStage = "all";
+      const starred = new Set();
+
+      /* ── Helpers ─────────────────────────────────────────────────────── */
+
+      function shortTitle(title) {
+        return title.replace(/ - (Full|Part) Time/g, "");
+      }
+
+      function getDetail(name) {
+        if (!USE_FAKE_DATA) return null;
+        return FAKE_APPLICANT_DETAILS.find(
+          (d) => d.name.toLowerCase() === name.toLowerCase(),
+        ) ?? null;
+      }
+
+      function getApplicantsForJob(jobId) {
+        return APPLICANTS.filter((a) => a.job_url === `/manage/jobs/${jobId}`);
+      }
+
+      const icons = {
+        starOutline: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>`,
+        starSolid: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd"/></svg>`,
+        magnifying: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>`,
+        briefcase: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z"/></svg>`,
+      };
+
+      /* ── Render ───────────────────────────────────────────────────────── */
+
+      function renderSidebar() {
+        const active = JOBS.filter((j) => j.status === "Active");
+
+        const jobRow = (j) => `
+        <div
+          class="flex items-center justify-between px-3 py-2 cursor-pointer gap-2 ${j.id === selectedJobId ? "bg-gray-100 font-medium" : "hover:bg-gray-50"}"
+          onclick="selectJob('${j.id}')"
+        >
+          <span class="truncate text-gray-700">${shortTitle(j.title)}</span>
+          <span class="text-xs text-gray-400 shrink-0">${j.applicant_count}</span>
+        </div>
+      `;
+
+        document.getElementById("sidebar").innerHTML = `
+        <div class="px-4 py-3 border-b font-semibold text-gray-800">Claude Cowork</div>
+        <div class="overflow-y-auto flex-1">
+          <div
+            class="flex items-center justify-between px-3 py-2 cursor-pointer gap-2 ${showStarred ? "bg-gray-100 font-medium" : "hover:bg-gray-50"}"
+            onclick="selectStarred()"
+          >
+            <span class="flex items-center gap-2 text-yellow-500">${icons.starSolid}<span class="text-gray-700">Starred</span></span>
+            <span class="text-xs text-gray-400 shrink-0">${starred.size}</span>
+          </div>
+          ${active.map(jobRow).join("")}
+        </div>
+      `;
+      }
+
+      function renderMain() {
+        const main = document.getElementById("main");
+
+        if (showStarred) {
+          renderStarred();
+          return;
+        }
+
+        if (!selectedJobId) {
+          main.innerHTML = `<p class="text-gray-400">Select a job to view applicants.</p>`;
+          return;
+        }
+
+        const job = JOBS.find((j) => j.id === selectedJobId);
+        const applicants = getApplicantsForJob(selectedJobId);
+
+        const gradeOrder = { A: 0, B: 1, C: 2, D: 3 };
+        const gradeColors = {
+          A: "text-emerald-600",
+          B: "text-amber-500",
+          C: "text-orange-500",
+          D: "text-gray-400",
+        };
+
+        const columns = [
+          { key: "name", label: "Applicant", val: (a, d) => a.name },
+          {
+            key: "grade",
+            label: "Grade",
+            val: (a, d) => gradeOrder[d?.grade] ?? 99,
+          },
+          { key: "yoe", label: "YOE", val: (a, d) => d?.yoe ?? -1 },
+          {
+            key: "skills",
+            label: "Skills",
+            val: (a, d) => d?.skills?.[0] ?? "",
+          },
+          {
+            key: "stage",
+            label: "Stage",
+            val: (a, d) => d?.current_step ?? a.current_step,
+          },
+          {
+            key: "source",
+            label: "Source",
+            val: (a, d) => d?.applied_via ?? "",
+          },
+          {
+            key: "applied",
+            label: "Applied",
+            val: (a, d) => d?.applied_date ?? "",
+          },
+        ];
+
+        let rows = applicants.map((a) => ({ a, d: getDetail(a.name) }));
+
+        if (filterQ) {
+          const q = filterQ.toLowerCase();
+          rows = rows.filter(
+            ({ a, d }) =>
+              a.name.toLowerCase().includes(q) ||
+              d?.skills?.some((s) => s.toLowerCase().includes(q)) ||
+              (d?.applied_via ?? "").toLowerCase().includes(q),
+          );
+        }
+
+        if (filterStage !== "all") {
+          rows = rows.filter(
+            ({ a, d }) => (d?.current_step ?? a.current_step) === filterStage,
+          );
+        }
+
+        if (sortCol) {
+          const col = columns.find((c) => c.key === sortCol);
+          rows.sort((x, y) => {
+            const av = col.val(x.a, x.d),
+              bv = col.val(y.a, y.d);
+            return av < bv ? -sortDir : av > bv ? sortDir : 0;
+          });
+        }
+
+        const thClass = (key) => {
+          const active = sortCol === key;
+          return `pb-2 pr-4 font-medium cursor-pointer select-none hover:text-gray-700 ${active ? "text-gray-800" : ""}`;
+        };
+        const arrow = (key) =>
+          sortCol === key ? (sortDir === 1 ? " ↑" : " ↓") : "";
+
+        const rowsHtml = rows
+          .map(({ a, d }) => {
+            const grade = d?.grade ?? "—";
+            const gradeClass = gradeColors[grade] ?? "text-gray-400";
+            const skills = d?.skills ? d.skills.slice(0, 2).join(", ") : "—";
+            const isStarred = starred.has(a.id);
+            return `
+          <tr class="border-t border-gray-100">
+            <td class="py-2 pr-2 w-6">
+              <button onclick="toggleStar('${a.id}')" class="flex items-center bg-transparent border-0 p-0 cursor-pointer ${isStarred ? "text-yellow-400" : "text-gray-300 hover:text-yellow-400"}">${isStarred ? icons.starSolid : icons.starOutline}</button>
+            </td>
+            <td class="py-2 pr-4 font-medium text-gray-800">${a.name}</td>
+            <td class="py-2 pr-4 font-mono font-semibold ${gradeClass}">${grade}</td>
+            <td class="py-2 pr-4 text-gray-500">${d?.yoe != null ? d.yoe + " yr" : "—"}</td>
+            <td class="py-2 pr-4 text-gray-500">${skills}</td>
+            <td class="py-2 pr-4 text-gray-500">${d?.current_step ?? a.current_step}</td>
+            <td class="py-2 pr-4 text-gray-500">${d?.applied_via ?? "—"}</td>
+            <td class="py-2 text-gray-500">${d?.applied_date ?? "—"}</td>
+          </tr>
+        `;
+          })
+          .join("");
+
+        const stages = [
+          "New Application",
+          "First Interview",
+          "Second Interview",
+          "Send Offer",
+          "Reference Check",
+          "Background Check with ADP",
+          "Hire",
+        ];
+        const stageLabel = {
+          "New Application": "New",
+          "First Interview": "1st Interview",
+          "Second Interview": "2nd Interview",
+          "Send Offer": "Offer",
+          "Reference Check": "Reference",
+          "Background Check with ADP": "Background",
+          Hire: "Hire",
+        };
+
+        main.innerHTML = `
+        <h1 class="text-base font-semibold text-gray-800 mb-1">${shortTitle(job.title)}</h1>
+        <p class="text-xs text-gray-400 mb-6">${job.location} · ${applicants.length} applicant${applicants.length !== 1 ? "s" : ""}</p>
+
+        <div class="flex items-center gap-3 mb-6">
+          <div class="relative">
+            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">${icons.magnifying}</span>
+            <input
+              id="search-input"
+              type="text"
+              placeholder="Search applicants..."
+              value="${filterQ}"
+              oninput="setFilter('q', this.value)"
+              class="border border-gray-200 rounded pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-300 w-56"
+            />
+          </div>
+          <div class="flex gap-1">
+            <button onclick="setFilter('stage','all')" class="px-3 py-1.5 rounded text-xs border ${filterStage === "all" ? "bg-gray-800 text-white border-gray-800" : "border-gray-200 text-gray-600 hover:bg-gray-50"}">All</button>
+            ${stages.map((s) => `<button onclick="setFilter('stage','${s}')" class="px-3 py-1.5 rounded text-xs border ${filterStage === s ? "bg-gray-800 text-white border-gray-800" : "border-gray-200 text-gray-600 hover:bg-gray-50"}">${stageLabel[s] ?? s}</button>`).join("")}
+          </div>
+        </div>
+
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="text-xs text-gray-400 uppercase">
+              <th class="pb-2 pr-2 w-6"></th>
+              ${columns.map((c) => `<th class="${thClass(c.key)}" onclick="sortBy('${c.key}')">${c.label}${arrow(c.key)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>${rowsHtml || `<tr><td colspan="8" class="py-6 text-center text-gray-400">No applicants yet.</td></tr>`}</tbody>
+        </table>
+      `;
+      }
+
+      function renderStarred() {
+        const main = document.getElementById("main");
+        const gradeColors = {
+          A: "text-emerald-600",
+          B: "text-amber-500",
+          C: "text-orange-500",
+          D: "text-gray-400",
+        };
+        const starredApplicants = APPLICANTS.filter((a) => starred.has(a.id));
+
+        const rowsHtml = starredApplicants
+          .map((a) => {
+            const d = getDetail(a.name);
+            const job = JOBS.find((j) => `/manage/jobs/${j.id}` === a.job_url);
+            const grade = d?.grade ?? "—";
+            const gradeClass = gradeColors[grade] ?? "text-gray-400";
+            const skills = d?.skills ? d.skills.slice(0, 2).join(", ") : "—";
+            return `
+          <tr class="border-t border-gray-100">
+            <td class="py-2 pr-2 w-6">
+              <button onclick="toggleStar('${a.id}')" class="flex items-center bg-transparent border-0 p-0 cursor-pointer text-yellow-400 hover:text-gray-300">${icons.starSolid}</button>
+            </td>
+            <td class="py-2 pr-4 font-medium text-gray-800">${a.name}</td>
+            <td class="py-2 pr-4 text-gray-500 text-xs truncate max-w-xs">${job ? shortTitle(job.title) : "—"}</td>
+            <td class="py-2 pr-4 font-mono font-semibold ${gradeClass}">${grade}</td>
+            <td class="py-2 pr-4 text-gray-500">${d?.yoe != null ? d.yoe + " yr" : "—"}</td>
+            <td class="py-2 pr-4 text-gray-500">${skills}</td>
+            <td class="py-2 pr-4 text-gray-500">${d?.current_step ?? a.current_step}</td>
+            <td class="py-2 text-gray-500">${d?.applied_date ?? "—"}</td>
+          </tr>
+        `;
+          })
+          .join("");
+
+        main.innerHTML = `
+        <h1 class="text-base font-semibold text-gray-800 mb-6">Starred Candidates</h1>
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="text-xs text-gray-400 uppercase">
+              <th class="pb-2 pr-2 w-6"></th>
+              <th class="pb-2 pr-4 font-medium">Applicant</th>
+              <th class="pb-2 pr-4 font-medium">Job</th>
+              <th class="pb-2 pr-4 font-medium">Grade</th>
+              <th class="pb-2 pr-4 font-medium">YOE</th>
+              <th class="pb-2 pr-4 font-medium">Skills</th>
+              <th class="pb-2 pr-4 font-medium">Stage</th>
+              <th class="pb-2 font-medium">Applied</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml || `<tr><td colspan="8" class="py-6 text-center text-gray-400">No starred candidates yet.</td></tr>`}</tbody>
+        </table>
+      `;
+      }
+
+      /* ── Actions ─────────────────────────────────────────────────────── */
+
+      async function selectJob(jobId) {
+        selectedJobId = jobId;
+        showStarred = false;
+        sortCol = null;
+        sortDir = 1;
+        filterQ = "";
+        filterStage = "all";
+
+        if (!USE_FAKE_DATA) {
+          const fetched = await list_applicants(jobId);
+          APPLICANTS = APPLICANTS.filter(
+            (a) => a.job_url !== `/manage/jobs/${jobId}`,
+          );
+          APPLICANTS.push(...fetched);
+        }
+
+        renderSidebar();
+        renderMain();
+      }
+
+      function selectStarred() {
+        showStarred = true;
+        selectedJobId = null;
+        renderSidebar();
+        renderMain();
+      }
+
+      function toggleStar(id) {
+        if (starred.has(id)) starred.delete(id);
+        else starred.add(id);
+        renderSidebar();
+        renderMain();
+      }
+
+      function setFilter(type, value) {
+        if (type === "q") filterQ = value;
+        else if (type === "stage") filterStage = value;
+        renderMain();
+        if (type === "q") {
+          const input = document.getElementById("search-input");
+          if (input) {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+          }
+        }
+      }
+
+      function sortBy(key) {
+        if (sortCol === key) sortDir *= -1;
+        else {
+          sortCol = key;
+          sortDir = 1;
+        }
+        renderMain();
+      }
+
+      /* ── Init ────────────────────────────────────────────────────────── */
+
+      async function init() {
+        console.log("[cowork] init: USE_FAKE_DATA =", USE_FAKE_DATA);
+        console.log("[cowork] init: window.cowork =", window.cowork);
+        if (USE_FAKE_DATA) {
+          JOBS = FAKE_JOBS;
+          APPLICANTS = FAKE_APPLICANTS;
+        } else {
+          try {
+            JOBS = await list_jobs();
+            console.log("[cowork] init: JOBS loaded, count =", JOBS.length);
+          } catch (err) {
+            console.error("[cowork] init: list_jobs threw:", err);
+          }
+        }
+        renderSidebar();
+        renderMain();
+      }
+
+      init();
+    </script>
+  </body>
+</html>

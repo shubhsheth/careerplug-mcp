@@ -12,7 +12,7 @@ from parsers import parse_jobs, parse_applicants, parse_applicant_details, parse
 
 mcp = fastmcp.FastMCP("careerplug")
 
-_DASHBOARD_HTML = Path(__file__).parent.parent / "index.html"
+_DASHBOARD_HTML = Path(__file__).parent.parent / "src" / "resources" / "dashboard.html"
 
 
 @mcp.resource("careerplug://dashboard", mime_type="text/html")
